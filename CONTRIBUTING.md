@@ -2,7 +2,6 @@
 
 Thank you for your interest in contributing to **CareXpert** as part of the **GDG CHARUSAT Open Source Contri Sprintathon**! 🎉
 
-
 ---
 
 ## 🚨 Contribution Rules (Strict Enforcement)
@@ -83,18 +82,6 @@ If you need environment variables to work on an assigned issue, please contact t
 - 📧 **Email:** jadejakrishnapal04@gmail.com || aaleya2604@gmail.com
 
 Environment details will be shared **only after the issue is officially assigned to you**.
-
----
-
-## 📋 Table of Contents
-
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Issue Guidelines](#issue-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Need Help?](#need-help)
 
 ---
 
@@ -274,15 +261,11 @@ git push origin feature/your-feature-name
    - **Screenshots**: Add before/after screenshots if UI changes are involved
 4. Click **"Create pull request"**
 
-> 💡 **For General Improvement PRs** (bugs or enhancements not linked to any issue): You must still include your **Team Number** and a clear explanation of what you changed and why. These PRs are reviewed strictly.
-
----
-
 ## 📝 Issue Guidelines
 
 ### Finding Issues
 
-Issues are categorized by difficulty level and **created exclusively by organizers**:
+Issues are categorized by difficulty level. Contributors may also create well-documented issues for valid improvements.
 
 **Beginner Level (Good First Issues)**
 - Simple UI fixes
@@ -303,32 +286,44 @@ Issues are categorized by difficulty level and **created exclusively by organize
 1. Find an unassigned issue you want to work on
 2. **Comment on the issue** with this format:
    > *"I'd like to work on this. - Team [your team number]"*
-3. **Wait for a maintainer to assign it to you** - this is mandatory
+3. **Wait for a maintainer to assign it to you** — this is mandatory
 4. Once assigned, start working and submit your PR within **3–5 days**
 5. If you can't complete it in time, comment to let maintainers know
 
-> ⚠️ **Do NOT open new issues.** If you spot a bug or have a feature idea, raise it with a maintainer directly in the event channel.
+> ⚠️ Before opening a new issue, ensure:
+> - The issue does not already exist
+> - It is clearly documented
+> - It aligns with the project scope
 
----
+### Creating a New Issue
+
+When creating a new issue:
+
+1. Use a clear and descriptive title
+2. Add a detailed description:
+   - What is the problem?
+   - Steps to reproduce (if bug)
+   - Expected behavior
+   - Screenshots (if UI-related)
+3. Wait for maintainer review before starting work
 
 ## 🔄 Pull Request Process
 
-### PR Requirements - Non-Negotiable
+### PR Requirements — Non-Negotiable
 
 > PRs that don't meet ALL of the following will be **closed without review**:
 
 - [ ] **Team number stated** in the PR description (e.g., `Team XX`)
-- [ ] **Linked to your assigned issue** via `Closes #issue-number` (unless it's a general improvement PR)
+- [ ] **Linked to your assigned issue** via `Closes #issue-number`
 - [ ] **You are the assigned contributor** for that issue
 - [ ] PR is raised **after** assignment, not before
-- [ ] **`pnpm-lock.yaml` is not replaced** with `package-lock.json` or `yarn.lock`
 
 ### Before Submitting
 
-- [ ] Code runs without errors (`pnpm dev` works)
-- [ ] Project builds successfully (`pnpm build`)
+- [ ] Code runs without errors (`npm run dev` works)
+- [ ] Project builds successfully (`npm run build`)
 - [ ] All new components are properly typed (TypeScript)
-- [ ] Tailwind CSS classes used - no inline styles
+- [ ] Tailwind CSS classes used — no inline styles
 - [ ] Tested on different screen sizes
 - [ ] No console errors or warnings
 - [ ] Commit messages follow the conventional format
@@ -336,9 +331,9 @@ Issues are categorized by difficulty level and **created exclusively by organize
 ### PR Review Process
 
 1. A maintainer will review your PR within 24–48 hours
-2. You may be asked to make changes - respond promptly
+2. You may be asked to make changes — respond promptly
 3. Make requested changes and push to the same branch (PR auto-updates)
-4. **Only maintainers can approve and merge** - do not request peers to merge
+4. **Only maintainers can approve and merge** — do not request peers to merge
 
 ### Addressing Review Comments
 
@@ -348,16 +343,6 @@ git add .
 git commit -m "fix: address review comments"
 git push origin feature/your-feature-name
 ```
-
-### General Improvement PRs (No Issue Linked)
-
-If you want to fix a bug or add a small improvement that isn't part of an existing issue, you may raise a PR directly **only if**:
-- It is a genuine improvement (not a trivial change)
-- Your **Team Number** is clearly stated in the PR description
-- You provide a clear explanation of what you changed and why
-- You understand it will be **reviewed strictly** and may be closed if not up to standard
-
----
 
 ## 🆘 Need Help?
 

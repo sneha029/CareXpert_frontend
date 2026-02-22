@@ -490,110 +490,96 @@ export default function ChatPage() {
     }
   };
 
-  // Load chat history and join room when selected chat changes
-  useEffect(() => {
-    const loadChatHistory = async () => {
-      console.log("ChatPage - User:", user);
-      console.log("ChatPage - Selected Chat:", selectedChat);
+// Load chat history and join room when selected chat changes
+useEffect(() => {
+  let isMounted = true;
 
+  const loadChatHistory = async () => {
+    if (!user) return;
+
+    try {
       if (
-        user &&
         typeof selectedChat === "object" &&
         selectedChat.type === "doctor"
       ) {
         const roomId = generateRoomId(user.id, selectedChat.data.userId);
         joinRoom(roomId);
 
-        try {
-          // Load 1-on-1 chat history
-          console.log(
-            "Loading chat history for doctor:",
-            selectedChat.data.userId
+        const historyResponse = await loadOneOnOneChatHistory(
+          selectedChat.data.userId
+        );
+
+        if (isMounted && historyResponse.success) {
+          const formattedMessages = historyResponse.data.messages.map(
+            (msg: any) => ({
+              roomId: roomId,
+              senderId: msg.senderId,
+              receiverId: msg.receiverId,
+              username: msg.sender.name,
+              text: msg.message,
+              time: new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              messageType: msg.messageType,
+              imageUrl: msg.imageUrl,
+            })
           );
-          const historyResponse = await loadOneOnOneChatHistory(
-            selectedChat.data.userId
-          );
-          console.log("Chat history response:", historyResponse);
-          if (historyResponse.success) {
-            const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
-                roomId: roomId,
-                senderId: msg.senderId,
-                receiverId: msg.receiverId,
-                username: msg.sender.name,
-                text: msg.message,
-                time: new Date(msg.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-                messageType: msg.messageType,
-                imageUrl: msg.imageUrl,
-              })
-            );
-            setMessages(formattedMessages);
-          }
-        } catch (error) {
-          console.error("Error loading doctor chat history:", error);
-          setMessages([]);
+          setMessages(formattedMessages);
         }
       } else if (
         typeof selectedChat === "object" &&
         selectedChat.type === "room"
       ) {
-        // Load city room history and join the exact server room id
-        // Join will happen after we know the room id from server
+        const historyResponse = await loadCityChatHistory(selectedChat.name);
 
-        try {
-          // Load city room chat history
-          const historyResponse = await loadCityChatHistory(selectedChat.name);
-          if (historyResponse.success) {
-            if (historyResponse.data?.room?.id) {
-              setActiveRoomId(historyResponse.data.room.id);
-              if (user) {
-                joinCommunityRoom(
-                  historyResponse.data.room.id,
-                  user.id,
-                  user.name
-                );
-              }
-            } else {
-              setActiveRoomId(selectedChat.id);
-              if (user) {
-                joinCommunityRoom(selectedChat.id, user.id, user.name);
-              }
-            }
-            const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
-                roomId: historyResponse.data?.room?.id || selectedChat.id,
-                senderId: msg.senderId,
-                receiverId: null,
-                username: msg.sender.name,
-                text: msg.message,
-                time: new Date(msg.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-                messageType: msg.messageType,
-                imageUrl: msg.imageUrl,
-              })
-            );
-            setMessages(formattedMessages);
+        if (isMounted && historyResponse.success) {
+          const roomId =
+            historyResponse.data?.room?.id || selectedChat.id;
+
+          setActiveRoomId(roomId);
+
+          if (user) {
+            joinCommunityRoom(roomId, user.id, user.name);
           }
 
-          // Fetch community members
+          const formattedMessages = historyResponse.data.messages.map(
+            (msg: any) => ({
+              roomId: roomId,
+              senderId: msg.senderId,
+              receiverId: null,
+              username: msg.sender.name,
+              text: msg.message,
+              time: new Date(msg.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+              messageType: msg.messageType,
+              imageUrl: msg.imageUrl,
+            })
+          );
+
+          setMessages(formattedMessages);
+
           await fetchCommunityMembers(selectedChat.id);
-        } catch (error) {
-          console.error("Error loading city chat history:", error);
-          setMessages([]);
         }
       } else if (selectedChat === "ai") {
-        // Clear messages for AI chat to display mock data
         setMessages([]);
       }
-    };
+    } catch (error) {
+      if (isMounted) {
+        console.error("Error loading chat history:", error);
+        setMessages([]);
+      }
+    }
+  };
 
-    loadChatHistory();
-  }, [selectedChat, user]);
+  loadChatHistory();
+
+  return () => {
+    isMounted = false;
+  };
+}, [selectedChat, user]);
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedChat || !user) return;
@@ -648,31 +634,33 @@ export default function ChatPage() {
   };
 
   // Listen for incoming messages
+  //Changed this for preventing duplicate listeners
   useEffect(() => {
-    const handleIncomingMessage = (msg: FormattedMessage) => {
-      if (msg.senderId === user?.id) return;
-      if (
-        typeof selectedChat === "object" &&
-        selectedChat.type === "doctor" &&
-        generateRoomId(user?.id || "", selectedChat.data.userId) === msg.roomId
-      ) {
-        setMessages((prev) => [...prev, msg]);
-      } else if (
-        typeof selectedChat === "object" &&
-        selectedChat.type === "room" &&
-        selectedChat.id === msg.roomId
-      ) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    };
+  const handleIncomingMessage = (msg: FormattedMessage) => {
+    if (msg.senderId === user?.id) return;
 
-    onMessage(handleIncomingMessage);
+    if (
+      typeof selectedChat === "object" &&
+      selectedChat.type === "doctor" &&
+      generateRoomId(user?.id || "", selectedChat.data.userId) === msg.roomId
+    ) {
+      setMessages((prev) => [...prev, msg]);
+    } else if (
+      typeof selectedChat === "object" &&
+      selectedChat.type === "room" &&
+      selectedChat.id === msg.roomId
+    ) {
+      setMessages((prev) => [...prev, msg]);
+    }
+  };
 
-    return () => {
-      offMessage();
-    };
-  }, [selectedChat, user]);
+  onMessage(handleIncomingMessage);
 
+  return () => {
+    offMessage(handleIncomingMessage);
+  };
+}, [selectedChat, user]);
+  
   return (
     <div className="h-[calc(100%-1rem)] overflow-hidden flex flex-col mt-4">
       {/* Mobile Header */}

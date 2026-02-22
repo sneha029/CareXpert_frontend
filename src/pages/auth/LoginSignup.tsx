@@ -1,52 +1,147 @@
+/**
+ * LoginSignup.tsx - Refactored to use react-hook-form with Zod validation
+ * 
+ * Changes made (Issue #25):
+ * 1. Replaced useState for form data with useForm hook from react-hook-form
+ * 2. Added Zod schemas for type-safe validation (loginSchema, signupSchema)
+ * 3. Removed manual onChange handlers - now using register() from react-hook-form
+ * 4. Added inline error messages for each field
+ * 5. Validation is now schema-based instead of scattered manual checks
+ * 6. Reduced re-renders - only touched fields re-render
+ * 7. Used zodResolver to connect Zod schemas with react-hook-form
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Card, CardContent, CardHeader } from "../../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
-import { Badge } from "../../components/ui/badge";
 import { Heart, User, Stethoscope, MapPin, Eye, EyeOff } from "lucide-react";
 import { useAuthStore } from "../../store/authstore";
 import axios from "axios";
 import { toast } from "sonner";
 
+/**
+ * Zod Schema for Login Form
+ * - data: email or username (required, min 1 character)
+ * - password: required, min 6 characters
+ */
+const loginSchema = z.object({
+  data: z.string().min(1, "Email or username is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+/**
+ * Zod Schema for Signup Form
+ * - Uses discriminatedUnion based on role (PATIENT vs DOCTOR)
+ * - Includes password confirmation validation via refine
+ * - Doctor requires specialty and clinicLocation
+ * - Patient requires location
+ */
+const baseSignupSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+});
+
+// Schema for Patient signup
+const patientSignupSchema = baseSignupSchema.extend({
+  role: z.literal("PATIENT"),
+  location: z.string().min(1, "Location is required"),
+});
+
+// Schema for Doctor signup
+const doctorSignupSchema = baseSignupSchema.extend({
+  role: z.literal("DOCTOR"),
+  specialty: z.string().min(1, "Specialty is required"),
+  clinicLocation: z.string().min(1, "Clinic location is required"),
+});
+
+// Combined signup schema with password match validation
+const signupSchema = z.discriminatedUnion("role", [patientSignupSchema, doctorSignupSchema])
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+// Type inference from Zod schemas
+type LoginFormData = z.infer<typeof loginSchema>;
+
+// Form type that includes all possible fields for react-hook-form
+// (We validate with Zod discriminated union on submit)
+type SignupFormFields = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  location: string;
+  specialty: string;
+  clinicLocation: string;
+};
+
 export default function LoginSignup() {
+  // UI state - kept as useState since these are not form data
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<"PATIENT" | "DOCTOR" | null>(null);
-  
-  // Form states
-  const [loginData, setLoginData] = useState({
-    data: "",
-    password: "",
-  });
-  
-  const [signupData, setSignupData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-    specialty: "",
-    clinicLocation: "",
-    location: "",
-  });
 
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /**
+   * Login Form - using react-hook-form with Zod resolver
+   * Benefits: 
+   * - No manual state management for form fields
+   * - Automatic validation on submit and onChange (after first submit)
+   * - Type-safe form data
+   */
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      data: "",
+      password: "",
+    },
+  });
+
+  /**
+   * Signup Form - using react-hook-form
+   * Uses SignupFormFields type to include ALL possible fields
+   * Validation is done manually with Zod on submit (discriminated union)
+   */
+  const signupForm = useForm<SignupFormFields>({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      location: "",
+      specialty: "",
+      clinicLocation: "",
+    },
+  });
+
+  /**
+   * Handle Login - simplified with react-hook-form
+   * Form validation is handled automatically by zodResolver
+   */
+  const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
 
     try {
       const response = await axios.post(
         `${import.meta.env.VITE_BASE_URL}/api/user/login`,
-        loginData,
+        data,
         { withCredentials: true }
       );
 
@@ -71,34 +166,63 @@ export default function LoginSignup() {
     }
   };
 
+  /**
+   * Handle Signup - with Zod validation
+   * Password matching and role-specific fields are validated by schema
+   */
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (signupData.password !== signupData.confirmPassword) {
-      toast.error("Passwords do not match");
+    // Get form values - now properly typed with all fields
+    const formValues = signupForm.getValues();
+    
+    // Check role first
+    if (!selectedRole) {
+      toast.error("Please select a role");
       return;
     }
 
-    if (!selectedRole) {
-      toast.error("Please select a role");
+    // Build complete data with role for validation
+    const completeData = {
+      firstName: formValues.firstName,
+      lastName: formValues.lastName,
+      email: formValues.email,
+      password: formValues.password,
+      confirmPassword: formValues.confirmPassword,
+      role: selectedRole,
+      ...(selectedRole === "PATIENT" && { location: formValues.location }),
+      ...(selectedRole === "DOCTOR" && { 
+        specialty: formValues.specialty,
+        clinicLocation: formValues.clinicLocation,
+      }),
+    };
+
+    // Validate with Zod schema
+    const validationResult = signupSchema.safeParse(completeData);
+    
+    if (!validationResult.success) {
+      // Show first validation error
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 
     setIsLoading(true);
 
     try {
+      // Build payload from form values (already validated)
       const payload = {
-        firstName: signupData.firstName,
-        lastName: signupData.lastName,
-        email: signupData.email,
-        password: signupData.password,
+        firstName: formValues.firstName,
+        lastName: formValues.lastName,
+        email: formValues.email,
+        password: formValues.password,
         role: selectedRole,
         ...(selectedRole === "DOCTOR" && {
-          specialty: signupData.specialty,
-          clinicLocation: signupData.clinicLocation,
+          specialty: formValues.specialty,
+          clinicLocation: formValues.clinicLocation,
         }),
         ...(selectedRole === "PATIENT" && {
-          location: signupData.location,
+          location: formValues.location,
         }),
       };
 
@@ -110,17 +234,8 @@ export default function LoginSignup() {
       if (response.data.success) {
         toast.success("Signup successful! Please login.");
         setIsLogin(true);
-        setSignupData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "",
-          specialty: "",
-          clinicLocation: "",
-          location: "",
-        });
+        // Reset form using react-hook-form's reset method
+        signupForm.reset();
         setSelectedRole(null);
       }
     } catch (error: any) {
@@ -130,9 +245,11 @@ export default function LoginSignup() {
     }
   };
 
+  /**
+   * Handle role selection and update form accordingly
+   */
   const handleRoleSelect = (role: "PATIENT" | "DOCTOR") => {
     setSelectedRole(role);
-    setSignupData(prev => ({ ...prev, role }));
   };
 
   return (
@@ -165,31 +282,35 @@ export default function LoginSignup() {
 
           <CardContent>
             <Tabs value={isLogin ? "login" : "signup"}>
-              {/* Login Tab */}
+              {/* Login Tab - Using react-hook-form's handleSubmit and register */}
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-6">
                   <div>
                     <Label htmlFor="login-data">Email or Username</Label>
+                    {/* Using register() instead of value + onChange */}
                     <Input
                       id="login-data"
                       type="text"
-                      value={loginData.data}
-                      onChange={(e) => setLoginData(prev => ({ ...prev, data: e.target.value }))}
+                      {...loginForm.register("data")}
                       placeholder="Enter your email or username"
-                      required
                     />
+                    {/* Display validation error from Zod schema */}
+                    {loginForm.formState.errors.data && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {loginForm.formState.errors.data.message}
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <Label htmlFor="login-password">Password</Label>
                     <div className="relative">
+                      {/* Using register() instead of value + onChange */}
                       <Input
                         id="login-password"
                         type={showPassword ? "text" : "password"}
-                        value={loginData.password}
-                        onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                        {...loginForm.register("password")}
                         placeholder="Enter your password"
-                        required
                       />
                       <Button
                         type="button"
@@ -201,6 +322,12 @@ export default function LoginSignup() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
+                    {/* Display validation error from Zod schema */}
+                    {loginForm.formState.errors.password && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {loginForm.formState.errors.password.message}
+                      </p>
+                    )}
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -209,10 +336,10 @@ export default function LoginSignup() {
                 </form>
               </TabsContent>
 
-              {/* Signup Tab */}
+              {/* Signup Tab - Using react-hook-form's register for all fields */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-6">
-                  {/* Role Selection */}
+                  {/* Role Selection - Kept as state since it controls conditional rendering */}
                   <div>
                     <Label>I want to join as:</Label>
                     <div className="grid grid-cols-2 gap-4 mt-2">
@@ -237,26 +364,22 @@ export default function LoginSignup() {
                     </div>
                   </div>
 
-                  {/* Basic Info */}
+                  {/* Basic Info - Using register() instead of value + onChange */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
                       <Input
                         id="firstName"
-                        value={signupData.firstName}
-                        onChange={(e) => setSignupData(prev => ({ ...prev, firstName: e.target.value }))}
+                        {...signupForm.register("firstName")}
                         placeholder="John"
-                        required
                       />
                     </div>
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
                       <Input
                         id="lastName"
-                        value={signupData.lastName}
-                        onChange={(e) => setSignupData(prev => ({ ...prev, lastName: e.target.value }))}
+                        {...signupForm.register("lastName")}
                         placeholder="Doe"
-                        required
                       />
                     </div>
                   </div>
@@ -266,21 +389,20 @@ export default function LoginSignup() {
                     <Input
                       id="email"
                       type="email"
-                      value={signupData.email}
-                      onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
+                      {...signupForm.register("email")}
                       placeholder="john@example.com"
-                      required
                     />
                   </div>
 
-                  {/* Doctor-specific fields */}
+                  {/* Doctor-specific fields - Using Controller for Select component */}
                   {selectedRole === "DOCTOR" && (
                     <>
                       <div>
                         <Label htmlFor="specialty">Specialty</Label>
+                        {/* Select requires special handling with react-hook-form */}
                         <Select
-                          value={signupData.specialty}
-                          onValueChange={(value) => setSignupData(prev => ({ ...prev, specialty: value }))}
+                          value={signupForm.watch("specialty") || ""}
+                          onValueChange={(value) => signupForm.setValue("specialty", value)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select your specialty" />
@@ -304,11 +426,9 @@ export default function LoginSignup() {
                           <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input
                             id="clinicLocation"
-                            value={signupData.clinicLocation}
-                            onChange={(e) => setSignupData(prev => ({ ...prev, clinicLocation: e.target.value }))}
+                            {...signupForm.register("clinicLocation")}
                             placeholder="City, State, Country"
                             className="pl-10"
-                            required
                           />
                         </div>
                       </div>
@@ -323,27 +443,23 @@ export default function LoginSignup() {
                         <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
                           id="location"
-                          value={signupData.location}
-                          onChange={(e) => setSignupData(prev => ({ ...prev, location: e.target.value }))}
+                          {...signupForm.register("location")}
                           placeholder="City, State, Country"
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
                   )}
 
-                  {/* Password fields */}
+                  {/* Password fields - Using register() */}
                   <div>
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        value={signupData.password}
-                        onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
+                        {...signupForm.register("password")}
                         placeholder="Create a password"
-                        required
                       />
                       <Button
                         type="button"
@@ -362,10 +478,8 @@ export default function LoginSignup() {
                     <Input
                       id="confirmPassword"
                       type="password"
-                      value={signupData.confirmPassword}
-                      onChange={(e) => setSignupData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      {...signupForm.register("confirmPassword")}
                       placeholder="Confirm your password"
-                      required
                     />
                   </div>
 

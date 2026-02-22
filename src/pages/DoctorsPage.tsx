@@ -4,6 +4,7 @@ import { Input } from "../components/ui/input";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { SearchX } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -66,9 +67,7 @@ export default function DoctorsPage() {
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [doctors , setDoctors] = useState<FindDoctors[]>([]);
   
-//fix1
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-const [isSearching, setIsSearching] = useState(false);
+
   // Booking dialog state
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<FindDoctors | null>(null);
@@ -84,38 +83,22 @@ const [isSearching, setIsSearching] = useState(false);
   const user = useAuthStore((state) => state.user);
   const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
 //fix2
- useEffect(() => {
+useEffect(() => {
+  setIsSearching(true);
+
   const timer = setTimeout(() => {
-    setDebouncedSearch(searchQuery);
+    setDebouncedSearchQuery(searchQuery);
   }, 400);
 
   return () => clearTimeout(timer);
 }, [searchQuery]);
-
 useEffect(() => {
   const fetchDoctors = async () => {
     try {
-      setIsSearching(true);
-
-  // Debounce search query
-  useEffect(() => {
-    if (searchQuery !== debouncedSearchQuery) {
-      setIsSearching(true);
-    }
-
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      setIsSearching(false);
-    }, 400);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchQuery]);
       const res = await axios.get<FindDoctorsApiResponse>(
         `${url}/fetchAllDoctors`,
         {
-          params: { search: debouncedSearch },
+          params: { search: debouncedSearchQuery },
           withCredentials: true,
         }
       );
@@ -135,7 +118,8 @@ useEffect(() => {
   };
 
   fetchDoctors();
-}, [debouncedSearch]);
+}, [debouncedSearchQuery]);
+  
   const specialties = [
     "Cardiology",
     "Dermatology",
@@ -155,24 +139,19 @@ useEffect(() => {
     "Miami, FL",
     "Seattle, WA",
   ];
-//fix 3
-  const filteredDoctors = doctors.filter((doctor) => {
-    const matchesSearch =
-      doctor.user.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-    const matchesSpecialty =
-      selectedSpecialty === "all" || doctor.specialty === selectedSpecialty;
-    const matchesLocation =
-      selectedLocation === "all" || doctor.clinicLocation === selectedLocation;
 
-    return matchesSearch && matchesSpecialty && matchesLocation;
-  });
+  const filteredDoctors = doctors.filter((doctor) => {
+  const matchesSearch =
+    doctor.user.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    doctor.specialty.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+
   const matchesSpecialty =
     selectedSpecialty === "all" || doctor.specialty === selectedSpecialty;
+
   const matchesLocation =
     selectedLocation === "all" || doctor.clinicLocation === selectedLocation;
 
-  return matchesSpecialty && matchesLocation;
+  return matchesSearch && matchesSpecialty && matchesLocation;
 });
 
   const openBookingDialog = (doctor: FindDoctors) => {
@@ -336,115 +315,28 @@ useEffect(() => {
 </div>
 
         {/* Doctor Cards */}
-        <div className="grid gap-6">
-          {filteredDoctors.map((doctor) => (
-            <Card
-              key={doctor.id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <CardContent className="p-6">
-                <div className="grid lg:grid-cols-12 gap-6 items-start">
-                  {/* Doctor Info - Takes 8 columns */}
-                  <div className="lg:col-span-8">
-                    <div className="flex gap-4">
-                      <Avatar className="h-20 w-20 flex-shrink-0">
-                        <AvatarImage
-                          src={doctor.user.profilePicture || "/placeholder.svg"}
-                        />
-                        <AvatarFallback>
-                          {doctor.user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white truncate">
-                            {doctor.user.name}
-                          </h3>
-                          {/* {doctor.verified && (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex-shrink-0">
-                              Verified
-                            </Badge>
-                          )} */}
-                        </div>
-
-                        <p className="text-blue-600 dark:text-blue-400 font-medium mb-2">
-                          {doctor.specialty}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300 mb-2">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">{doctor.clinicLocation}</span>
-                          </div>
-                          
-                          <span className="whitespace-nowrap">
-                            {doctor.experience} experience
-                          </span>
-                        </div>
-
-                        <p className="text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-                          {doctor.bio}
-                        </p>
-
-                        <div className="flex flex-col gap-2">
-                        {doctor.education && (
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {doctor.education}
-                            </Badge>
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {doctor.languages.map((lang) => (
-                            <Badge key={lang} variant="outline" className="text-xs">
-                              {lang}
-                            </Badge>
-                          ))}
-                        </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Booking Info - Takes 4 columns */}
-                  <div className="lg:col-span-4">
-                    <div className="flex flex-col h-full">
-                      <div className="text-center mb-4">
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                          ${doctor.consultationFee || " 0 "}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Consultation fee
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
-                        <Clock className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span>Available for booking</span>
-                      </div>
-
-                      <Button
-                        className="w-full"
-                        onClick={() => openBookingDialog(doctor)}
-                      >
-                        <Heart className="h-4 w-4 mr-2" />
-                        Book Appointment
-                      </Button>
-
-                      
-
-
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        
+          {filteredDoctors.length === 0 ? (
+  <div className="flex flex-col items-center justify-center py-20 text-center">
+    <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+      No doctors found
+    </h3>
+    <p className="text-gray-600 dark:text-gray-300">
+      Try adjusting filters or modifying your search.
+    </p>
+  </div>
+) : (
+  <div className="grid gap-6">
+    {filteredDoctors.map((doctor) => (
+      <Card
+        key={doctor.id}
+        className="overflow-hidden hover:shadow-lg transition-shadow"
+      >
+        {/* paste your original card content here */}
+      </Card>
+    ))}
+  </div>
+)}
       </div>
 
       {/* Booking Dialog */}

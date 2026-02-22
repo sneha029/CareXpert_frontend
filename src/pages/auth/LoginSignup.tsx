@@ -1,14 +1,13 @@
 /**
- * LoginSignup.tsx - Refactored to use react-hook-form with Zod validation
+ * LoginSignup.tsx - Auth page using react-hook-form + Zod for login, and manual Zod validation for signup.
  * 
  * Changes made (Issue #25):
- * 1. Replaced useState for form data with useForm hook from react-hook-form
+ * 1. Replaced useState for login form data with useForm hook from react-hook-form
  * 2. Added Zod schemas for type-safe validation (loginSchema, signupSchema)
- * 3. Removed manual onChange handlers - now using register() from react-hook-form
- * 4. Added inline error messages for each field
- * 5. Validation is now schema-based instead of scattered manual checks
- * 6. Reduced re-renders - only touched fields re-render
- * 7. Used zodResolver to connect Zod schemas with react-hook-form
+ * 3. Removed manual onChange handlers for the login form - now using register() from react-hook-form
+ * 4. Added inline error messages for each login field via react-hook-form
+ * 5. Login validation is now schema-based via zodResolver; signup uses Zod safeParse with toast-based errors
+ * 6. Reduced re-renders for the login form - only touched fields re-render
  */
 
 import { useState } from "react";
@@ -394,7 +393,7 @@ export default function LoginSignup() {
                     />
                   </div>
 
-                  {/* Doctor-specific fields - Using Controller for Select component */}
+                  {/* Doctor-specific fields - using watch() + setValue() for Select integration */}
                   {selectedRole === "DOCTOR" && (
                     <>
                       <div>
@@ -402,7 +401,7 @@ export default function LoginSignup() {
                         {/* Select requires special handling with react-hook-form */}
                         <Select
                           value={signupForm.watch("specialty") || ""}
-                          onValueChange={(value) => signupForm.setValue("specialty", value)}
+                          onValueChange={(value) => signupForm.setValue("specialty", value, { shouldValidate: true, shouldDirty: true })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select your specialty" />

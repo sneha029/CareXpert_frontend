@@ -319,6 +319,9 @@ export default function BookAppointmentPage() {
                 <CardContent>
                   {/* Form using react-hook-form's handleSubmit */}
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Hidden field to register doctorId so it's included in form submission */}
+                    <input type="hidden" {...register("doctorId")} />
+                    
                     <div className="grid md:grid-cols-2 gap-4">
                       {/* Date field - using register() */}
                       <div className="space-y-2">
@@ -340,7 +343,7 @@ export default function BookAppointmentPage() {
                         <Label htmlFor="time">Time</Label>
                         <Select
                           value={watch("time")}
-                          onValueChange={(value) => setValue("time", value)}
+                          onValueChange={(value) => setValue("time", value, { shouldValidate: true, shouldDirty: true })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select time" />
@@ -366,7 +369,7 @@ export default function BookAppointmentPage() {
                       <Select
                         value={watch("appointmentType")}
                         onValueChange={(value: "ONLINE" | "OFFLINE") => 
-                          setValue("appointmentType", value)
+                          setValue("appointmentType", value, { shouldValidate: true, shouldDirty: true })
                         }
                       >
                         <SelectTrigger>

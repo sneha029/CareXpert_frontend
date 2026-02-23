@@ -16,11 +16,13 @@ import {
   CheckCircle,
   XCircle,
   Mail,
+  RefreshCw,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import EmptyState from "@/components/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -387,17 +389,13 @@ export default function DoctorAppointmentsPage() {
           </div>
 
           {pendingRequests.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No pending requests
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                  You don't have any pending appointment requests at the moment.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              title="No Pending Requests"
+              description="You don't have any pending appointment requests at the moment. New requests from patients will appear here."
+              icon={<Calendar className="h-8 w-8" />}
+              ctaLabel="Refresh"
+              onCtaClick={fetchAppointments}
+            />
           ) : (
             <div className="grid gap-6">
               {pendingRequests.map((appointment) => (
@@ -579,19 +577,15 @@ export default function DoctorAppointmentsPage() {
           </div>
 
           {appointments.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                  No appointments found
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                  You don't have any appointments scheduled yet.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              title="No Appointments Scheduled"
+              description="You don't have any appointments yet. Once patients book appointments with you, they will appear here."
+              icon={<Calendar className="h-8 w-8" />}
+              ctaLabel="View Pending Requests"
+              onCtaClick={() => setActiveTab("requests")}
+            />
           ) : (
-            <div className="grid gap-4">
+            <div className="space-y-6">
               {appointments.map((appointment) => (
                 <motion.div
                   key={appointment.id}

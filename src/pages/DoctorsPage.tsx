@@ -30,26 +30,26 @@ import EmptyState from "@/components/EmptyState";
 
 type FindDoctors = {
   id: string,
-  userId : string,
+  userId: string,
   specialty: string,
   clinicLocation: string,
   experience: string,
-  education : string,
-  bio : string,
+  education: string,
+  bio: string,
   languages: string[];
-  consultationFee : number,
-  user : {
+  consultationFee: number,
+  user: {
     name: string,
-    profilePicture : string
+    profilePicture: string
   },
-  nextAvailable : string
+  nextAvailable: string
 }
 
 type FindDoctorsApiResponse = {
-  statusCode : number,
-  message : string,
-  success : boolean,
-  data : FindDoctors[];
+  statusCode: number,
+  message: string,
+  success: boolean,
+  data: FindDoctors[];
 }
 
 type AppointmentBookingData = {
@@ -62,12 +62,12 @@ type AppointmentBookingData = {
 
 export default function DoctorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
-  const [doctors , setDoctors] = useState<FindDoctors[]>([]);
-  
+  const [doctors, setDoctors] = useState<FindDoctors[]>([]);
+
   // Booking dialog state
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<FindDoctors | null>(null);
@@ -82,44 +82,44 @@ export default function DoctorsPage() {
 
   const user = useAuthStore((state) => state.user);
   const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
-//fix2
-useEffect(() => {
-  setIsSearching(true);
 
-  const timer = setTimeout(() => {
-    setDebouncedSearchQuery(searchQuery);
-  }, 400);
-
-  return () => clearTimeout(timer);
-}, [searchQuery]);
-useEffect(() => {
-  const fetchDoctors = async () => {
-    try {
-      const res = await axios.get<FindDoctorsApiResponse>(
-        `${url}/fetchAllDoctors`,
-        {
-          params: { search: debouncedSearchQuery },
-          withCredentials: true,
-        }
-      );
-
-      if (res.data.success) {
-        setDoctors(res.data.data);
-      }
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data?.message || "Something went wrong");
-      } else {
-        toast.error("An unexpected error occurred.");
-      }
-    } finally {
+  // Debounce search query
+  useEffect(() => {
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
       setIsSearching(false);
-    }
-  };
+    }, 400);
 
-  fetchDoctors();
-}, [debouncedSearchQuery]);
-  
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const res = await axios.get<FindDoctorsApiResponse>(
+          `${url}/fetchAllDoctors`,
+          {
+            params: { search: debouncedSearch },
+            withCredentials: true,
+          }
+        );
+
+        if (res.data.success) {
+          setDoctors(res.data.data);
+        }
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          toast.error(err.response.data?.message || "Something went wrong");
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+      }
+    };
+
+    fetchDoctors();
+  }, [debouncedSearch, url]);
+
   const specialties = [
     "Cardiology",
     "Dermatology",
@@ -141,15 +141,12 @@ useEffect(() => {
   ];
 
   const filteredDoctors = doctors.filter((doctor) => {
-    const matchesSearch =
-      doctor.user.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     const matchesSpecialty =
       selectedSpecialty === "all" || doctor.specialty === selectedSpecialty;
     const matchesLocation =
       selectedLocation === "all" || doctor.clinicLocation === selectedLocation;
 
-    return matchesSearch && matchesSpecialty && matchesLocation;
+    return matchesSpecialty && matchesLocation;
   });
 
   const openBookingDialog = (doctor: FindDoctors) => {
@@ -157,7 +154,7 @@ useEffect(() => {
       toast.error("Please login as a patient to book appointments");
       return;
     }
-    
+
     setSelectedDoctor(doctor);
     setBookingData({
       doctorId: doctor.id,
@@ -183,14 +180,14 @@ useEffect(() => {
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!bookingData.date || !bookingData.time) {
       toast.error("Please select both date and time");
       return;
     }
 
     setIsBooking(true);
-    
+
     try {
       const res = await axios.post(
         `${url}/book-direct-appointment`,
@@ -300,17 +297,17 @@ useEffect(() => {
         </Card>
 
         {/* Results */}
-       
+
         <div className="mb-6 flex items-center justify-between">
-  <p className="text-gray-600 dark:text-gray-300">
-    Showing {filteredDoctors.length} doctors
-  </p>
-  {isSearching && (
-    <span className="text-sm text-blue-600">
-      Searching...
-    </span>
-  )}
-</div>
+          <p className="text-gray-600 dark:text-gray-300">
+            Showing {filteredDoctors.length} doctors
+          </p>
+          {isSearching && (
+            <span className="text-sm text-blue-600">
+              Searching...
+            </span>
+          )}
+        </div>
 
         {/* Doctor Cards */}
         {!isSearching && filteredDoctors.length === 0 ? (
@@ -365,7 +362,7 @@ useEffect(() => {
                             <MapPin className="h-4 w-4 flex-shrink-0" />
                             <span className="truncate">{doctor.clinicLocation}</span>
                           </div>
-                          
+
                           <span className="whitespace-nowrap">
                             {doctor.experience} experience
                           </span>
@@ -376,20 +373,20 @@ useEffect(() => {
                         </p>
 
                         <div className="flex flex-col gap-2">
-                        {doctor.education && (
+                          {doctor.education && (
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {doctor.education}
+                              </Badge>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {doctor.education}
-                            </Badge>
+                            {doctor.languages.map((lang) => (
+                              <Badge key={lang} variant="outline" className="text-xs">
+                                {lang}
+                              </Badge>
+                            ))}
                           </div>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {doctor.languages.map((lang) => (
-                            <Badge key={lang} variant="outline" className="text-xs">
-                              {lang}
-                            </Badge>
-                          ))}
-                        </div>
                         </div>
                       </div>
                     </div>
@@ -419,6 +416,10 @@ useEffect(() => {
                         <Heart className="h-4 w-4 mr-2" />
                         Book Appointment
                       </Button>
+
+
+
+
                     </div>
                   </div>
                 </div>
@@ -436,7 +437,7 @@ useEffect(() => {
           <DialogHeader>
             <DialogTitle>Book Appointment</DialogTitle>
           </DialogHeader>
-          
+
           {selectedDoctor && (
             <>
               {/* Doctor Info */}
@@ -499,7 +500,7 @@ useEffect(() => {
                   <Label htmlFor="appointmentType">Appointment Type</Label>
                   <Select
                     value={bookingData.appointmentType}
-                    onValueChange={(value: "ONLINE" | "OFFLINE") => 
+                    onValueChange={(value: "ONLINE" | "OFFLINE") =>
                       setBookingData(prev => ({ ...prev, appointmentType: value }))
                     }
                   >

@@ -12,7 +12,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import * as React from "react";
 import { toast } from "sonner";
-import axios from "axios";
 import { useAuthStore } from "@/store/authstore";
 
 const getPasswordRules = (pwd: string) => [
@@ -29,6 +28,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showRules, setShowRules] = useState(false);
   const navigate = useNavigate();
@@ -59,7 +59,6 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
 
     const newErrors: { email?: string; password?: string } = {};
     const rules = getPasswordRules(password);
@@ -81,28 +80,22 @@ export default function Login() {
 
     if (Object.keys(newErrors).length > 0) return;
 
+    setIsLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/user/login`, { data: email, password }, {
-        withCredentials: true
-      });
-      if (res.data.success) {
-        useAuthStore.getState().setUser({
-          id: res.data.data.id,
-          name: res.data.data.name,
-          email: res.data.data.email,
-          profilePicture: res.data.data.profilePicture,
-          role: res.data.data.role,
-          refreshToken: res.data.data.refreshToken
-        });
-        if (res.data.data.role === "PATIENT") {
+      await useAuthStore.getState().login(email, password);
+      const user = useAuthStore.getState().user;
+      if (user) {
+        if (user.role === "PATIENT") {
           navigate("/dashboard/patient");
-        } else {
+        } else if (user.role === "DOCTOR") {
           navigate("/dashboard/doctor");
+        } else if (user.role === "ADMIN") {
+          navigate("/admin");
         }
       }
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        toast.error(err.response.data?.message || "Something went wrong");
+      if (err instanceof Error) {
+        toast.error(err.message);
       } else {
         toast.error("Unknown error occurred.");
       }
@@ -187,7 +180,16 @@ export default function Login() {
               )}
             </div>
 
-            <Button type="submit" className="w-full">Sign In</Button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
           </form>
           <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
             Don't have an account?{" "}

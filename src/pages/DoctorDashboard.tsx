@@ -68,10 +68,8 @@ type AppointmentApiResponse = {
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
-  // const { user, isLoading } = useAuth() // Assuming a different auth context for now
   const user = useAuthStore((state) => state.user);
-  // const user = { name: "Dr. John Smith", role: "doctor" }; // Dummy user for UI demonstration
-  const isLoading = false; // Assume loading is false for dummy data
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [_selectedTimeSlot, _setSelectedTimeSlot] = useState(""); // Keep this state for future UI
   const [_searchQuery, _setSearchQuery] = useState(""); // Keep this state for future UI
 

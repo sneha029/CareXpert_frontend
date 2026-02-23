@@ -30,16 +30,17 @@ import {
   BarChart3,
   Activity,
 } from "lucide-react";
-import { useAuth } from "../context/auth-context";
+import { useAuthStore } from "../store/authstore";
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [_searchQuery, _setSearchQuery] = useState("");
   const [_filterStatus, _setFilterStatus] = useState("all");
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== "admin")) {
+    if (!isLoading && (!user || user.role !== "ADMIN")) {
       navigate("/auth/login");
     }
   }, [user, isLoading, navigate]);

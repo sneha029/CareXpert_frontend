@@ -197,8 +197,10 @@ CareXpert_frontend/
 │   │   ├── theme-provider.tsx   # Theme context provider
 │   │   └── theme-toggle.tsx     # Dark/light mode toggle
 │   ├── context/             # React context providers
-│   │   ├── auth-context.tsx # Authentication context & provider
+│   │   ├── auth-context.tsx # DEPRECATED: Use authstore.ts instead
 │   │   └── theme-context.tsx# Theme context & provider
+│   ├── store/               # Zustand stores
+│   │   └── authstore.ts     # Authentication state management (Zustand)
 │   ├── lib/                 # Utility functions
 │   │   └── utils.ts         # Helper utilities (cn, etc.)
 │   ├── pages/               # Page-level components (one per route)

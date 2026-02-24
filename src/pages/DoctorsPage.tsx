@@ -67,6 +67,7 @@ export default function DoctorsPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [doctors, setDoctors] = useState<FindDoctors[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Booking dialog state
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
@@ -95,30 +96,33 @@ export default function DoctorsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const res = await axios.get<FindDoctorsApiResponse>(
-          `${url}/fetchAllDoctors`,
-          {
-            params: { search: debouncedSearch },
-            withCredentials: true,
-          }
-        );
+  const fetchDoctors = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axios.get<FindDoctorsApiResponse>(
+        `${url}/fetchAllDoctors`,
+        {
+          params: { search: debouncedSearch },
+          withCredentials: true,
+        }
+      );
 
-        if (res.data.success) {
-          setDoctors(res.data.data);
-        }
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          toast.error(err.response.data?.message || "Something went wrong");
-        } else {
-          toast.error("An unexpected error occurred.");
-        }
+      if (res.data.success) {
+        setDoctors(res.data.data);
       }
-    };
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) {
+        toast.error(err.response.data?.message || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchDoctors();
-  }, [debouncedSearch, url]);
+  fetchDoctors();
+}, [debouncedSearch, url]);
 
   const specialties = [
     "Cardiology",
@@ -310,7 +314,27 @@ export default function DoctorsPage() {
         </div>
 
         {/* Doctor Cards */}
-        {!isSearching && filteredDoctors.length === 0 ? (
+   {/* Doctor Cards */}
+{isLoading ? (
+ <div className="grid gap-6">
+  {[1, 2, 3].map((i) => (
+    <Card key={i} className="overflow-hidden">
+      <CardContent className="p-6">
+        <div className="flex gap-4">
+          <div className="h-20 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+
+          <div className="flex-1 space-y-3">
+            <div className="h-5 w-1/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-4 w-1/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  ))}
+</div>
+) : !isSearching && filteredDoctors.length === 0 ? (
           <EmptyState
             title="No Doctors Available Yet"
             description="We couldn't find any doctors matching your search criteria. Try adjusting your filters or check back later as new doctors join our platform."

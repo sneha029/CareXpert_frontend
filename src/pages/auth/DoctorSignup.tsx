@@ -37,7 +37,6 @@ import {
 import { InputWithIcon } from "../../components/ui/input-with-icon";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -108,7 +107,7 @@ export default function DoctorSignup() {
    */
   const onSubmit = async (data: DoctorSignupFormData) => {
     try {
-      const res = await api.post(`/api/user/signup`, {
+      const res = await api.post(`/user/signup`, {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,

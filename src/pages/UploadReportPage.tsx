@@ -10,28 +10,9 @@ import {
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { Badge } from "../components/ui/badge";
-
-interface AbnormalValue {
-  name: string;
-  value: string | number;
-  unit: string;
-  normal: string;
-  issue: string;
-}
-
-interface ReportAnalysisResult {
-  id?: string;
-  filename?: string;
-  status?: "IDLE" | "PROCESSING" | "COMPLETED" | "FAILED";
-  summary?: string;
-  abnormalValues?: AbnormalValue[];
-  possibleConditions?: (string | { condition: string })[];
-  recommendation?: string;
-  disclaimer?: string;
-  error?: string;
-}
 
 export default function UploadReportPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -44,7 +25,6 @@ export default function UploadReportPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const pollRef = useRef<number | null>(null);
-  const apiBase = `${import.meta.env.VITE_BASE_URL}/api`;
   const LS_REPORT_STATE_KEY = "report-analyzer-state";
   const LS_LAST_RESULT_KEY = "report-analyzer-last";
 
@@ -150,7 +130,7 @@ const handleSubmit = async () => {
       setIsUploading(false);
       setStatus("FAILED");
       const msg =
-        api.isAxiosError(err)
+        axios.isAxiosError(err)
           ? err.response?.data?.message || err.message
           : err instanceof Error ? err.message : "Upload failed";
       setErrorMessage(msg);

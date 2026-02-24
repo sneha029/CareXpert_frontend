@@ -17,11 +17,11 @@ import {
   FileText,
   User,
   MapPin,
-  Clock,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { relativeTime } from "@/lib/utils";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import EmptyState from "@/components/EmptyState";
@@ -47,8 +47,6 @@ export default function PrescriptionsPage() {
   const user = useAuthStore((state) => state.user);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
-
   useEffect(() => {
     if (!user || user.role !== "PATIENT") {
       navigate("/auth/login");
@@ -59,12 +57,12 @@ export default function PrescriptionsPage() {
     async function fetchPrescriptions() {
       try {
         setIsLoading(true);
-        const res = await api.get<PrescriptionApiResponse>(`/view-prescriptions`, { withCredentials: true });
+        const res = await api.get<PrescriptionApiResponse>(`/patient/view-Prescriptions`, { withCredentials: true });
         if (res.data.success) {
           setPrescriptions(res.data.data);
         }
       } catch (err) {
-        if (api.isAxiosError(err) && err.response) {
+        if (axios.isAxiosError(err) && err.response) {
           toast.error(err.response.data?.message || "Something went wrong");
         } else {
           toast.error("Unknown error occurred");
@@ -74,7 +72,7 @@ export default function PrescriptionsPage() {
       }
     }
     fetchPrescriptions();
-  }, [url]);
+  }, []);
 
   if (isLoading) {
     return (

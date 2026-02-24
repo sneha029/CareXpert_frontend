@@ -37,9 +37,10 @@ import {
 } from "../components/ui/select";
 import { ScrollArea as _ScrollArea } from "../components/ui/scroll-area";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authstore";
-import { Appointment, Doctor, User } from "@/types";
+import { Appointment } from "@/types";
 
 type AppointmentApiResponse = {
   statusCode: number;
@@ -60,8 +61,6 @@ export default function DoctorDashboard() {
     Appointment[]
   >([]);
 
-  const url = `${import.meta.env.VITE_BASE_URL}/api/doctor`;
-  // Redirect if not logged in or not a doctor (using dummy logic for now)
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "DOCTOR")) {
       navigate("/auth/login"); // Use react-router-dom navigate
@@ -72,7 +71,7 @@ export default function DoctorDashboard() {
     async function fetchAppointments() {
       try {
         const res = await api.get<AppointmentApiResponse>(
-          `/all-appointments`,
+          `/doctor/all-appointments`,
           { withCredentials: true }
         );
         if (res.data.success) {
@@ -99,7 +98,7 @@ export default function DoctorDashboard() {
           setUpcomingApppointments(upcoming);
         }
       } catch (err) {
-        if (api.isAxiosError(err) && err.response) {
+        if (axios.isAxiosError(err) && err.response) {
           toast.error(err.response.data?.message || "Something went wrong");
         } else {
           toast.error("Unknown error occured");
@@ -238,19 +237,19 @@ export default function DoctorDashboard() {
                         <Avatar>
                           <AvatarImage
                             src={
-                              appointment.patient.profilePicture || "/placeholder.svg"
+                              appointment.patient?.profilePicture || "/placeholder.svg"
                             }
                           />
                           <AvatarFallback>
-                            {appointment.patient.name
+                            {appointment.patient?.name
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("") ?? "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold text-gray-900 dark:text-white">
-                            {appointment.patient.name}
+                            {appointment.patient?.name ?? "Unknown"}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {new Date(appointment.date).toLocaleDateString("en-US")} at {appointment.time}
@@ -316,19 +315,19 @@ export default function DoctorDashboard() {
                         <Avatar>
                           <AvatarImage
                             src={
-                              appointment.patient.profilePicture || "/placeholder.svg"
+                              appointment.patient?.profilePicture || "/placeholder.svg"
                             }
                           />
                           <AvatarFallback>
-                            {appointment.patient.name
+                            {appointment.patient?.name
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("") ?? "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold text-gray-900 dark:text-white">
-                            {appointment.patient.name}
+                            {appointment.patient?.name ?? "Unknown"}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {new Date(appointment.date).toLocaleDateString("en-US")} at {appointment.time}

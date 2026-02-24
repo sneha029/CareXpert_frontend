@@ -1,7 +1,8 @@
-import { Navigate, Outlet, useLocation, useEffect } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authstore";
 import { Loader2 } from "lucide-react";
-import { connectSocket } from "@/sockets/socket"; // <-- Added this
+import { connectSocket } from "@/sockets/socket";
 
 export default function ProtectedRoute() {
   const user = useAuthStore((state) => state.user);

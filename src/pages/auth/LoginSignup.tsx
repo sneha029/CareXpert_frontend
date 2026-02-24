@@ -139,7 +139,7 @@ export default function LoginSignup() {
 
     try {
       const response = await api.post(
-        `/api/user/login`,
+        `/user/login`,
         data
       );
 
@@ -229,7 +229,7 @@ export default function LoginSignup() {
       };
 
       const response = await api.post(
-        `/api/user/signup`,
+        `/user/signup`,
         payload
       );
 

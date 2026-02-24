@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Skeleton } from "../components/ui/skeleton";
 import {
@@ -12,8 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { Textarea } from "../components/ui/textarea";
-import { Label } from "../components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +20,8 @@ import {
 } from "../components/ui/dialog";
 import {
   Search,
-  MapPin,
-  Clock,
   Filter,
   Heart,
-  Video,
-  User,
   Loader2,
   Stethoscope,
 } from "lucide-react";
@@ -95,9 +88,6 @@ export default function DoctorsPage() {
   const [isBooking, setIsBooking] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  // Kept URL for reference if needed, but api instance handles the base URL
-  const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
-
   /* ================= EFFECTS ================= */
 
   useEffect(() => {

@@ -1,9 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-// import axios from 'axios';
+import axios from "axios";
 import { api } from "@/lib/api";
 import { disconnectSocket } from '@/sockets/socket';
-import { Appointment, Doctor } from "@/types";
 
 interface User {
   id: string;
@@ -37,7 +36,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         try {
-          const res = await api.post("/api/user/login", {
+          const res = await api.post("/user/login", {
             data: email,
             password,
           });

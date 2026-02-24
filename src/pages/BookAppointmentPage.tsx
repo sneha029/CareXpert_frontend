@@ -159,7 +159,7 @@ export default function BookAppointmentPage() {
     
     try {
       // Used centralized api instance and react-hook-form data
-      const res = await api.post(`/api/patient/book-direct-appointment`, data);
+      const res = await api.post(`/patient/book-direct-appointment`, data);
 
       if (res.data.success) {
         toast.success("Appointment request sent successfully! You will be notified once the doctor responds.");

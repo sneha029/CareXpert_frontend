@@ -16,10 +16,10 @@ import {
   CheckCircle,
   XCircle,
   Mail,
-  RefreshCw,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import EmptyState from "@/components/EmptyState";
@@ -87,8 +87,6 @@ export default function DoctorAppointmentsPage() {
     useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const url = `${import.meta.env.VITE_BASE_URL}/api`;
-
   useEffect(() => {
     if (user?.role === "DOCTOR") {
       fetchAppointments();
@@ -120,7 +118,7 @@ export default function DoctorAppointmentsPage() {
       }
     } catch (error) {
       console.error("Error fetching appointments:", error);
-      if (api.isAxiosError(error) && error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         toast.error(
           error.response.data?.message || "Failed to fetch appointments"
         );
@@ -147,7 +145,7 @@ export default function DoctorAppointmentsPage() {
       }
     } catch (error) {
       console.error("Error accepting appointment:", error);
-      if (api.isAxiosError(error) && error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         toast.error(
           error.response.data?.message || "Failed to accept appointment"
         );
@@ -185,7 +183,7 @@ export default function DoctorAppointmentsPage() {
               toast.success("Appointment marked as completed");
             }
           } catch (error) {
-            if (api.isAxiosError(error) && error.response) {
+            if (axios.isAxiosError(error) && error.response) {
               toast.error(
                 error.response.data?.message || "Failed to mark as completed"
               );
@@ -202,7 +200,7 @@ export default function DoctorAppointmentsPage() {
         fetchAppointments();
       }
     } catch (error) {
-      if (api.isAxiosError(error) && error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         toast.error(
           error.response.data?.message || "Failed to save prescription"
         );
@@ -263,7 +261,7 @@ export default function DoctorAppointmentsPage() {
       }
     } catch (error) {
       console.error("Error rejecting appointment:", error);
-      if (api.isAxiosError(error) && error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         toast.error(
           error.response.data?.message || "Failed to reject appointment"
         );

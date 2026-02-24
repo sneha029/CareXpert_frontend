@@ -27,14 +27,14 @@ interface SidebarProps {
 export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const user = useAuthStore((state) => state.user);
   const [unreadCount, setUnreadCount] = useState(0);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch unread notification count with optimized polling
   useEffect(() => {
     if (user) {
       const fetchUnreadCount = async () => {
         try {
-          const response = await api.get('/api/user/notifications/unread-count');
+          const response = await api.get('/user/notifications/unread-count');
           if (response.data.success) {
             setUnreadCount(response.data.data.unreadCount);
           }

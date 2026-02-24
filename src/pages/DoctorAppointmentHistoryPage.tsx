@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Input } from "../components/ui/input";
@@ -66,8 +67,6 @@ export default function DoctorAppointmentHistoryPage() {
   const [dateFilter, setDateFilter] = useState<string>('all');
 
   const user = useAuthStore((state) => state.user);
-  const url = `${import.meta.env.VITE_BASE_URL}/api`;
-
   useEffect(() => {
     if (user?.role === "DOCTOR") {
       fetchAppointmentHistory();
@@ -91,7 +90,7 @@ export default function DoctorAppointmentHistoryPage() {
       }
     } catch (error) {
       console.error("Error fetching appointment history:", error);
-      if (api.isAxiosError(error) && error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         toast.error(error.response.data?.message || "Failed to fetch appointment history");
       } else {
         toast.error("Failed to fetch appointment history");

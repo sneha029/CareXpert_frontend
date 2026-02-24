@@ -31,6 +31,7 @@ import {
 import { useAuthStore } from "@/store/authstore";
 import { relativeTime } from "@/lib/utils";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -69,8 +70,6 @@ export default function DoctorPendingRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [alternativeSlots, setAlternativeSlots] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const url = `${import.meta.env.VITE_BASE_URL}/api/doctor`;
-
   useEffect(() => {
     if (!user || user.role !== "DOCTOR") {
       navigate("/auth/login");
@@ -84,12 +83,12 @@ export default function DoctorPendingRequestsPage() {
   const fetchPendingRequests = async () => {
     try {
       setIsLoading(true);
-      const res = await api.get(`/pending-requests`, { withCredentials: true });
+      const res = await api.get(`/doctor/pending-requests`, { withCredentials: true });
       if (res.data.success) {
         setPendingRequests(res.data.data);
       }
     } catch (err) {
-      if (api.isAxiosError(err) && err.response) {
+      if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Failed to fetch pending requests");
       } else {
         toast.error("Unknown error occurred");
@@ -120,7 +119,7 @@ export default function DoctorPendingRequestsPage() {
       }
 
       const res = await api.patch(
-        `/appointment-requests/${selectedRequest.id}/respond`,
+        `/doctor/appointment-requests/${selectedRequest.id}/respond`,
         payload,
         { withCredentials: true }
       );
@@ -135,7 +134,7 @@ export default function DoctorPendingRequestsPage() {
         setAlternativeSlots("");
       }
     } catch (err) {
-      if (api.isAxiosError(err) && err.response) {
+      if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Failed to process request");
       } else {
         toast.error("Unknown error occurred");

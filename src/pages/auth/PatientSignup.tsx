@@ -76,7 +76,7 @@ export default function PatientSignup() {
   const onSubmit = async (data: PatientSignupFormData) => {
     try {
       const res = await api.post(
-        `/api/user/signup`,
+        `/user/signup`,
         {
           firstName: data.firstName,
           lastName: data.lastName,

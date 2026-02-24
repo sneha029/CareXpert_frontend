@@ -29,7 +29,7 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       const response = await api.get(
-        `/api/user/notifications`,
+        `/user/notifications`,
         { withCredentials: true }
       );
       
@@ -48,7 +48,7 @@ export default function NotificationsPage() {
     setMarkingAsRead(notificationId);
     try {
       await api.put(
-        `/api/user/notifications/${notificationId}/read`,
+        `/user/notifications/${notificationId}/read`,
         {},
         { withCredentials: true }
       );
@@ -72,7 +72,7 @@ export default function NotificationsPage() {
   const markAllAsRead = async () => {
     try {
       await api.put(
-        `/api/user/notifications/mark-all-read`,
+        `/user/notifications/mark-all-read`,
         {},
         { withCredentials: true }
       );

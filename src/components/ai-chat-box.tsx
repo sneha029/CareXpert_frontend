@@ -58,7 +58,7 @@ export function AIChatBox() {
 
       if (isUserLoggedIn) {
         // Use your new centralized API instance
-        await api.delete('/api/ai-chat/history');
+        await api.delete('/ai-chat/history');
         toast.success("Chat history cleared from server");
       } else {
         // Just show success for demo mode

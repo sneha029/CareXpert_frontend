@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { relativeTime } from "@/lib/utils";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import EmptyState from "@/components/EmptyState";
 
 type Prescription = {
   id: string;
@@ -45,8 +47,6 @@ export default function PrescriptionsPage() {
   const user = useAuthStore((state) => state.user);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
-
   useEffect(() => {
     if (!user || user.role !== "PATIENT") {
       navigate("/auth/login");
@@ -57,7 +57,7 @@ export default function PrescriptionsPage() {
     async function fetchPrescriptions() {
       try {
         setIsLoading(true);
-        const res = await axios.get<PrescriptionApiResponse>(`${url}/view-prescriptions`, { withCredentials: true });
+        const res = await api.get<PrescriptionApiResponse>(`/patient/view-Prescriptions`, { withCredentials: true });
         if (res.data.success) {
           setPrescriptions(res.data.data);
         }
@@ -72,7 +72,7 @@ export default function PrescriptionsPage() {
       }
     }
     fetchPrescriptions();
-  }, [url]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -146,7 +146,7 @@ export default function PrescriptionsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(`${url}/prescription-pdf/${prescription.id}`, "_blank")}
+                          onClick={() => window.open(`/prescription-pdf/${prescription.id}`, "_blank")}
                         >
                           <Download className="h-4 w-4 mr-1" />
                           Download PDF
@@ -202,28 +202,13 @@ export default function PrescriptionsPage() {
             ))}
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-center py-12"
-          >
-            <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Pill className="h-12 w-12 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              No Prescriptions Found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
-              You don't have any prescriptions yet. Your prescriptions will appear here after your appointments.
-            </p>
-            <Button
-              onClick={() => navigate("/doctors")}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Book an Appointment
-            </Button>
-          </motion.div>
+          <EmptyState
+            title="No Prescriptions Found"
+            description="You don't have any prescriptions yet. Prescriptions will appear here once created by your doctor after an appointment."
+            icon={<Pill className="h-8 w-8" />}
+            ctaLabel="Book an Appointment"
+            onCtaClick={() => navigate("/doctors")}
+          />
         )}
       </motion.div>
     </div>

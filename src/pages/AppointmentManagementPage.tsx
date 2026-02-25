@@ -18,6 +18,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -57,8 +58,6 @@ export default function AppointmentManagementPage() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
-
   useEffect(() => {
     if (!user || user.role !== "PATIENT") {
       navigate("/auth/login");
@@ -76,10 +75,7 @@ export default function AppointmentManagementPage() {
     async function fetchAppointments() {
       try {
         setIsLoading(true);
-        const res = await axios.get<AppointmentApiResponse>(
-          `${url}/all-appointments`,
-          { withCredentials: true }
-        );
+        const res = await api.get<AppointmentApiResponse>(`/patient/all-appointments`, { withCredentials: true });
         if (res.data.success) {
           const allAppointments = res.data.data;
           const now = new Date();
@@ -116,7 +112,7 @@ export default function AppointmentManagementPage() {
     }
 
     fetchAppointments();
-  }, [url]);
+  }, []);
 
   useEffect(() => {
     console.log(upcomingAppointments);

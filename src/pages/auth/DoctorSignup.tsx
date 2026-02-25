@@ -1,3 +1,13 @@
+/**
+ * DoctorSignup.tsx - Refactored to use react-hook-form with Zod validation
+ * * Changes made:
+ * 1. Replaced multiple useState hooks with useForm hook from react-hook-form
+ * 2. Added Zod schema (doctorSignupSchema) for type-safe validation
+ * 3. Removed manual onChange handlers - now using register() and Controller for Select
+ * 4. Added inline error messages for each field
+ * 5. Centralized validation in Zod schema
+ * 6. Used zodResolver to connect Zod schema with react-hook-form
+ */
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -27,20 +37,33 @@ import {
 import { InputWithIcon } from "../../components/ui/input-with-icon";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import * as React from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 
+/**
+ * Zod Schema for Doctor Signup Form
+ * Defines validation rules for all doctor signup fields
+ */
+const doctorSignupSchema = z.object({
+  firstName: z.string().min(1, "First name is required").min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(1, "Last name is required").min(2, "Last name must be at least 2 characters"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  specialty: z.string().min(1, "Please select a specialty"),
+  experience: z.string().optional(),
+  license: z.string().optional(),
+  location: z.string().min(1, "Location is required"),
+  password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters"),
+});
+
+// Type inference from Zod schema
+type DoctorSignupFormData = z.infer<typeof doctorSignupSchema>;
+
 export default function DoctorSignup() {
   const [showPassword, setShowPassword] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [specialty, setSpecialty] = useState("");
-  const [experience, setExperience] = useState("");
-  const [license, setLicense] = useState("");
-  const [location, setLocation] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   // Mock data for specialties
@@ -56,34 +79,51 @@ export default function DoctorSignup() {
     "Other",
   ];
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-  
-    if (!firstName || !lastName || !email || !specialty || !location || !password) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-  
+  /**
+   * Doctor Signup Form - using react-hook-form with Zod resolver
+   */
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<DoctorSignupFormData>({
+    resolver: zodResolver(doctorSignupSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      specialty: "",
+      experience: "",
+      license: "",
+      location: "",
+      password: "",
+    },
+  });
+
+  /**
+   * Handle form submission - simplified with react-hook-form
+   * Validation is handled automatically by zodResolver
+   */
+  const onSubmit = async (data: DoctorSignupFormData) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/user/signup`, {
-        firstName,
-        lastName,
-        email,
-        password,
+      const res = await api.post(`/user/signup`, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
         role: "DOCTOR",
-        specialty,
-        clinicLocation: location,
-      }, {
-        withCredentials: true,
+        specialty: data.specialty,
+        clinicLocation: data.location,
       });
-  
+
       if (res.data.success) {
         toast.success("Doctor account created successfully!");
         navigate("/dashboard/doctor");
       } else {
         toast.error(res.data.message || "Signup failed");
       }
-    } catch (err: any) {
+    } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Something went wrong");
       } else {
@@ -106,7 +146,8 @@ export default function DoctorSignup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6" onSubmit={handleSignup}>
+          {/* Form using react-hook-form's handleSubmit */}
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label
@@ -119,10 +160,13 @@ export default function DoctorSignup() {
                   id="firstName"
                   type="text"
                   placeholder="Dr. John"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  {...register("firstName")}
                   icon={<User className="h-4 w-4 text-gray-400" />}
                 />
+                {/* Display validation error from Zod schema */}
+                {errors.firstName && (
+                  <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label
@@ -135,10 +179,12 @@ export default function DoctorSignup() {
                   id="lastName"
                   type="text"
                   placeholder="Smith"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  {...register("lastName")}
                   icon={<User className="h-4 w-4 text-gray-400" />}
                 />
+                {errors.lastName && (
+                  <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                )}
               </div>
             </div>
 
@@ -153,10 +199,12 @@ export default function DoctorSignup() {
                 id="email"
                 type="email"
                 placeholder="dr.smith@hospital.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
                 icon={<Mail className="h-4 w-4 text-gray-400" />}
               />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -167,18 +215,28 @@ export default function DoctorSignup() {
                 >
                   Specialty
                 </label>
-                <Select value={specialty} onValueChange={setSpecialty}>
-                  <SelectTrigger id="specialty">
-                    <SelectValue placeholder="Select specialty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {specialties.map((specialty) => (
-                      <SelectItem key={specialty} value={specialty}>
-                        {specialty}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Using Controller for Select component */}
+                <Controller
+                  name="specialty"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="specialty">
+                        <SelectValue placeholder="Select specialty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {specialties.map((spec) => (
+                          <SelectItem key={spec} value={spec}>
+                            {spec}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.specialty && (
+                  <p className="text-sm text-red-500">{errors.specialty.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label
@@ -191,8 +249,7 @@ export default function DoctorSignup() {
                   id="experience"
                   type="text"
                   placeholder="5 years"
-                  value={experience}
-                  onChange={(e) => setExperience(e.target.value)}
+                  {...register("experience")}
                   icon={<BriefcaseBusiness className="h-4 w-4 text-gray-400" />}
                 />
               </div>
@@ -210,8 +267,7 @@ export default function DoctorSignup() {
                   id="license"
                   type="text"
                   placeholder="MD123456"
-                  value={license}
-                  onChange={(e) => setLicense(e.target.value)}
+                  {...register("license")}
                   icon={<CreditCard className="h-4 w-4 text-gray-400" />}
                 />
               </div>
@@ -226,10 +282,12 @@ export default function DoctorSignup() {
                   id="location"
                   type="text"
                   placeholder="New York, NY"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  {...register("location")}
                   icon={<MapPin className="h-4 w-4 text-gray-400" />}
                 />
+                {errors.location && (
+                  <p className="text-sm text-red-500">{errors.location.message}</p>
+                )}
               </div>
             </div>
 
@@ -245,8 +303,7 @@ export default function DoctorSignup() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   icon={<Lock className="h-4 w-4 text-gray-400" />}
                 />
                 <button
@@ -261,13 +318,17 @@ export default function DoctorSignup() {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
             </div>
 
             <Button
               type="submit"
               className="w-full bg-green-600 hover:bg-green-700"
+              disabled={isSubmitting}
             >
-              Create Doctor Account
+              {isSubmitting ? "Creating Account..." : "Create Doctor Account"}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">

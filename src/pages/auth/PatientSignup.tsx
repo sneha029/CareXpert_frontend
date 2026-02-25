@@ -1,3 +1,13 @@
+/**
+ * PatientSignup.tsx - Refactored to use react-hook-form with Zod validation
+ * * Changes made:
+ * 1. Replaced multiple useState hooks with useForm hook from react-hook-form
+ * 2. Added Zod schema (patientSignupSchema) for type-safe validation
+ * 3. Removed manual onChange handlers - now using register()
+ * 4. Added inline error messages for each field
+ * 5. Password confirmation validation done via Zod refine
+ * 6. Used zodResolver to connect Zod schema with react-hook-form
+ */
 import { Button } from "../../components/ui/button";
 import {
   Card,
@@ -10,47 +20,74 @@ import { Mail, Lock, Eye, EyeOff, Heart, User } from "lucide-react";
 import { InputWithIcon } from "../../components/ui/input-with-icon";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import * as React from "react";
-import { toast } from "sonner"; // ✅ Import toast
-import axios from "axios"; // ✅ Import axios
-import { useAuthStore } from "@/store/authstore"; // ✅ Import auth store if needed
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import axios from "axios";
+import { useAuthStore } from "@/store/authstore";
+
+/**
+ * Zod Schema for Patient Signup Form
+ * Includes password confirmation validation via refine
+ */
+const patientSignupSchema = z.object({
+  firstName: z.string().min(1, "First name is required").min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(1, "Last name is required").min(2, "Last name must be at least 2 characters"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  password: z.string().min(1, "Password is required").min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+// Type inference from Zod schema
+type PatientSignupFormData = z.infer<typeof patientSignupSchema>;
 
 export default function PatientSignup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /**
+   * Patient Signup Form - using react-hook-form with Zod resolver
+   */
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<PatientSignupFormData>({
+    resolver: zodResolver(patientSignupSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
+  /**
+   * Handle form submission - simplified with react-hook-form
+   * Validation is handled automatically by zodResolver
+   */
+  const onSubmit = async (data: PatientSignupFormData) => {
     try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_BASE_URL}/api/user/signup`,
+      const res = await api.post(
+        `/user/signup`,
         {
-          firstName,
-          lastName,
-          email,
-          password,
-        },
-        {
-          withCredentials: true, // ✅ If your backend sets cookies, use this
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
         }
       );
 
       if (res.data.success) {
         toast.success("Account created successfully!");
 
-        // Optionally, set user data if you want to auto-login after signup
         useAuthStore.getState().setUser({
           id: res.data.data.id,
           name: res.data.data.name,
@@ -60,7 +97,6 @@ export default function PatientSignup() {
           refreshToken: res.data.data.refreshToken,
         });
 
-        // Navigate based on role
         if (res.data.data.role === "PATIENT") {
           navigate("/dashboard/patient");
         } else {
@@ -69,7 +105,7 @@ export default function PatientSignup() {
       } else {
         toast.error(res.data.message || "Signup failed");
       }
-    } catch (err: any) {
+    } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         toast.error(err.response.data?.message || "Something went wrong");
       } else {
@@ -91,7 +127,8 @@ export default function PatientSignup() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-6" onSubmit={handleSignup}>
+          {/* Form using react-hook-form's handleSubmit */}
+          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="firstName" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -101,10 +138,13 @@ export default function PatientSignup() {
                   id="firstName"
                   type="text"
                   placeholder="John"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  {...register("firstName")}
                   icon={<User className="h-4 w-4 text-gray-400" />}
                 />
+                {/* Display validation error from Zod schema */}
+                {errors.firstName && (
+                  <p className="text-sm text-red-500">{errors.firstName.message}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label htmlFor="lastName" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -114,10 +154,12 @@ export default function PatientSignup() {
                   id="lastName"
                   type="text"
                   placeholder="Doe"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  {...register("lastName")}
                   icon={<User className="h-4 w-4 text-gray-400" />}
                 />
+                {errors.lastName && (
+                  <p className="text-sm text-red-500">{errors.lastName.message}</p>
+                )}
               </div>
             </div>
 
@@ -129,10 +171,12 @@ export default function PatientSignup() {
                 id="email"
                 type="email"
                 placeholder="john.doe@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                {...register("email")}
                 icon={<Mail className="h-4 w-4 text-gray-400" />}
               />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -144,8 +188,7 @@ export default function PatientSignup() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register("password")}
                   icon={<Lock className="h-4 w-4 text-gray-400" />}
                 />
                 <button
@@ -156,6 +199,9 @@ export default function PatientSignup() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -167,8 +213,7 @@ export default function PatientSignup() {
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  {...register("confirmPassword")}
                   icon={<Lock className="h-4 w-4 text-gray-400" />}
                 />
                 <button
@@ -179,10 +224,13 @@ export default function PatientSignup() {
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {errors.confirmPassword && (
+                <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+              )}
             </div>
 
-            <Button type="submit" className="w-full">
-              Create Account
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">

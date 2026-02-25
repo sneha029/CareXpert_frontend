@@ -4,6 +4,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Calendar, Clock, User, MapPin, FileText, Search } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -55,8 +56,6 @@ export default function AppointmentHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const user = useAuthStore((state) => state.user);
-  const url = `${import.meta.env.VITE_BASE_URL}/api`;
-
   useEffect(() => {
     if (user?.role === "PATIENT") {
       fetchAppointmentHistory();
@@ -70,8 +69,8 @@ export default function AppointmentHistoryPage() {
   const fetchAppointmentHistory = async () => {
     try {
       setLoading(true);
-      const response = await axios.get<AppointmentApiResponse>(
-        `${url}/patient/all-appointments`,
+      const response = await api.get<AppointmentApiResponse>(
+        `/patient/all-appointments`,
         { withCredentials: true }
       );
 
@@ -398,7 +397,7 @@ export default function AppointmentHistoryPage() {
                     <div className="mt-4">
                       <Button
                         variant="secondary"
-                        onClick={() => window.open(`${url}/patient/prescription-pdf/${appointment.prescriptionId}`, '_blank')}
+                        onClick={() => window.open(`/patient/prescription-pdf/${appointment.prescriptionId}`, '_blank')}
                       >
                         View Prescription
                       </Button>

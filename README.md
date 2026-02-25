@@ -197,8 +197,10 @@ CareXpert_frontend/
 │   │   ├── theme-provider.tsx   # Theme context provider
 │   │   └── theme-toggle.tsx     # Dark/light mode toggle
 │   ├── context/             # React context providers
-│   │   ├── auth-context.tsx # Authentication context & provider
+│   │   ├── auth-context.tsx # DEPRECATED: Use authstore.ts instead
 │   │   └── theme-context.tsx# Theme context & provider
+│   ├── store/               # Zustand stores
+│   │   └── authstore.ts     # Authentication state management (Zustand)
 │   ├── lib/                 # Utility functions
 │   │   └── utils.ts         # Helper utilities (cn, etc.)
 │   ├── pages/               # Page-level components (one per route)
@@ -220,8 +222,6 @@ CareXpert_frontend/
 │   ├── main.tsx             # Application entry point
 │   ├── globals.css          # Global styles & Tailwind directives
 │   └── vite-env.d.ts        # Vite/TypeScript env type declarations
-├── styles/
-│   └── globals.css          # Additional global styles
 ├── components.json          # shadcn/ui configuration
 ├── tailwind.config.ts       # Tailwind CSS configuration
 ├── vite.config.ts           # Vite configuration

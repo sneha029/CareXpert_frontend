@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import VideoCall from "../components/VideoCall";
+import React, { useEffect, useState, lazy, Suspense } from "react";
+import { api } from "@/lib/api";
+
+const VideoCall = lazy(() => import("../components/VideoCall"));
 
 interface MeetingResponse {
   roomId: string;
@@ -14,7 +15,7 @@ const StartCall: React.FC = () => {
   useEffect(() => {
     const getRoom = async () => {
       try {
-        const res = await axios.post<MeetingResponse>(`${import.meta.env.VITE_BASE_URL}/api/chat/get-token`);
+        const res = await api.post<MeetingResponse>(`/api/chat/get-token`);
         setMeetingId(res.data.roomId);
         setToken(res.data.token);
       } catch (err) {
@@ -26,7 +27,9 @@ const StartCall: React.FC = () => {
   }, []);
 
   return meetingId && token ? (
-    <VideoCall meetingId={meetingId} token={token} name="Dr. Vasu" />
+    <Suspense fallback={<div className="text-center mt-10 text-xl">🔄 Loading Video Call...</div>}>
+      <VideoCall meetingId={meetingId} token={token} name="Dr. Vasu" />
+    </Suspense>
   ) : (
     <div className="text-center mt-10 text-xl">🔄 Starting Video Call...</div>
   );

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Send, Trash2 } from "lucide-react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
+import axios from "axios";
+import { useAuthStore } from "@/store/authstore";
 
 export function AIChatBox() {
   const [message, setMessage] = useState("");
@@ -51,13 +53,12 @@ export function AIChatBox() {
     ]);
 
     try {
-      // Check if user is logged in before attempting to call backend
-      const storedAuth = localStorage.getItem("auth-storage");
-      const isUserLoggedIn = storedAuth ? JSON.parse(storedAuth).state?.user !== null : false;
+      // Use Zustand to check if user is logged in (matches your PR's goal!)
+      const isUserLoggedIn = useAuthStore.getState().user !== null;
 
       if (isUserLoggedIn) {
-        const baseUrl = `${import.meta.env.VITE_BASE_URL}/api/ai-chat`;
-        await axios.delete(`${baseUrl}/history`, { withCredentials: true });
+        // Use your new centralized API instance
+        await api.delete('/ai-chat/history');
         toast.success("Chat history cleared from server");
       } else {
         // Just show success for demo mode

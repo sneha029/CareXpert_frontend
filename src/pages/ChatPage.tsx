@@ -29,7 +29,8 @@ import {
   Stethoscope,
   Trash2,
 } from "lucide-react";
-import axios from "axios";
+import { api } from "@/lib/api";
+import axios from "axios"; // Needed for axios.isAxiosError
 import { toast } from "sonner";
 import {
   FormattedMessage,
@@ -105,15 +106,12 @@ export default function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
-  const url = `${import.meta.env.VITE_BASE_URL}/api`;
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     async function fetchAllDoctors() {
       try {
-        const res = await axios.get(`${url}/patient/fetchAllDoctors`, {
-          withCredentials: true,
-        });
+        const res = await api.get(`/patient/fetchAllDoctors`);
         if (res.data.success) {
           setDoctors(res.data.data);
         }
@@ -126,7 +124,7 @@ export default function ChatPage() {
       }
     }
     fetchAllDoctors();
-  }, [url]);
+  }, []);
 
   useEffect(() => {
     async function fetchCity() {
@@ -135,12 +133,10 @@ export default function ChatPage() {
       try {
         const endpoint =
           user.role === "DOCTOR"
-            ? `${url}/doctor/city-rooms`
-            : `${url}/patient/city-rooms`;
+            ? `/doctor/city-rooms`
+            : `/patient/city-rooms`;
 
-        const res = await axios.get<CityRoomApiResponse>(endpoint, {
-          withCredentials: true,
-        });
+        const res = await api.get<CityRoomApiResponse>(endpoint);
 
         if (res.data.success) {
           const data = res.data.data;
@@ -229,10 +225,9 @@ export default function ChatPage() {
       (messages.length > 0 || aiMessages.length > 0) &&
       messagesEndRef.current
     ) {
-      //fix3
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, aiMessages, isInitialLoad]); // Added isInitialLoad to dependencies
+  }, [messages, aiMessages, isInitialLoad]);
 
   // Load AI chat history when AI tab is selected
   useEffect(() => {
@@ -244,9 +239,7 @@ export default function ChatPage() {
   // Function to load AI chat history
   const loadAiChatHistory = async () => {
     try {
-      const response = await axios.get(`${url}/ai-chat/history`, {
-        withCredentials: true,
-      });
+      const response = await api.get(`/ai-chat/history`);
       if (response.data.success) {
         const chats = response.data.data.chats || [];
         if (chats.length === 0) {
@@ -304,9 +297,6 @@ export default function ChatPage() {
     let response = `**Probable Causes:**\n${probableCauses
       .map((cause: string) => `• ${cause}`)
       .join("\n")}\n\n`;
-    // response += `**Severity:**\n ${
-    //   severity.charAt(0).toUpperCase() + severity.slice(1)
-    // }\n\n`;
     response += `**Recommendation:**\n${recommendation}\n\n`;
     response += `**Disclaimer:**\n${disclaimer}`;
 
@@ -330,7 +320,7 @@ export default function ChatPage() {
     ]);
 
     try {
-      await axios.delete(`${url}/ai-chat/history`, { withCredentials: true });
+      await api.delete(`/ai-chat/history`);
       toast.success("AI chat history cleared");
     } catch (error) {
       console.error("Error clearing AI chat history:", error);
@@ -356,16 +346,16 @@ export default function ChatPage() {
 
       // Clear the input immediately
       setMessage("");
-      //fix5
-      const response = await axios.post(
-        `${url}/ai-chat/process`,
+
+      // Replaced with centralized API and retained timeout from main
+      const response = await api.post(
+        `/ai-chat/process`,
         {
           symptoms: userMessage,
           language: selectedLanguage,
         },
         {
-          withCredentials: true,
-          timeout: 15000
+          timeout: 15000,
         }
       );
 
@@ -405,9 +395,7 @@ export default function ChatPage() {
   // Function to fetch DM conversations for doctors
   const fetchDmConversations = async () => {
     try {
-      const response = await axios.get(`${url}/chat/doctor/conversations`, {
-        withCredentials: true,
-      });
+      const response = await api.get(`/chat/doctor/conversations`);
       if (response.data.success) {
         setDmConversations(response.data.data.conversations);
       }
@@ -465,11 +453,8 @@ export default function ChatPage() {
   // Function to fetch community members
   const fetchCommunityMembers = async (roomId: string) => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL
-        }/api/user/communities/${roomId}/members`,
-        { withCredentials: true }
-      );
+      // Replaced with centralized API and cleaned up template string
+      const response = await api.get(`/user/communities/${roomId}/members`);
       if (response.data.success) {
         setCommunityMembers(response.data.data.members);
       }

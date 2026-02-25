@@ -10,8 +10,10 @@ import { Heart, Users, Clock, Shield, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
-import { AIChatBox } from "../components/ai-chat-box";
+import { lazy, Suspense } from "react";
 import { SampleCredentials } from "../components/sample-credentials";
+
+const AIChatBox = lazy(() => import("../components/ai-chat-box").then(module => ({ default: module.AIChatBox })));
 
 export default function HomePage() {
   return (
@@ -73,7 +75,9 @@ export default function HomePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AIChatBox />
+                <Suspense fallback={<div className="text-center py-8 text-gray-500">Loading AI Chat...</div>}>
+                  <AIChatBox />
+                </Suspense>
               </CardContent>
             </Card>
           </div>

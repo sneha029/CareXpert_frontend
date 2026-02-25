@@ -1,5 +1,19 @@
+/**
+ * BookAppointmentPage.tsx - Refactored to use react-hook-form with Zod validation
+ * * Changes made (Issue #25):
+ * 1. Replaced useState for formData with useForm hook from react-hook-form
+ * 2. Added Zod schema (appointmentSchema) for type-safe validation
+ * 3. Removed manual handleInputChange - now using register() and setValue()
+ * 4. Added inline error messages for validation
+ * 5. Centralized validation in Zod schema instead of manual checks
+ * 6. Used zodResolver to connect Zod schema with react-hook-form
+ */
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { Button } from "../components/ui/button";
@@ -18,9 +32,32 @@ import {
 import { Textarea } from "../components/ui/textarea";
 import { MapPin, Clock, Star, Video, User } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { useAuthStore } from "@/store/authstore";
 
+/**
+ * Zod Schema for Appointment Booking Form
+ * - doctorId: required string
+ * - date: required, must be a valid date string
+ * - time: required, must be selected
+ * - appointmentType: enum of ONLINE or OFFLINE
+ * - notes: optional string
+ */
+const appointmentSchema = z.object({
+  doctorId: z.string().min(1, "Doctor ID is required"),
+  date: z.string().min(1, "Please select a date"),
+  time: z.string().min(1, "Please select a time"),
+  appointmentType: z.enum(["ONLINE", "OFFLINE"], {
+    errorMap: () => ({ message: "Please select appointment type" }),
+  }),
+  notes: z.string().optional(),
+});
+
+// Type inference from Zod schema
+type AppointmentFormData = z.infer<typeof appointmentSchema>;
+
+// Type for Doctor data from API
 type Doctor = {
   id: string;
   userId: string;
@@ -44,32 +81,39 @@ type DoctorApiResponse = {
   data: Doctor;
 };
 
-type AppointmentBookingData = {
-  doctorId: string;
-  date: string;
-  time: string;
-  appointmentType: "ONLINE" | "OFFLINE";
-  notes?: string;
-};
-
 export default function BookAppointmentPage() {
   const { id: doctorId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   
+  // UI state - kept as useState since these are not form data
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
-  
-  const [formData, setFormData] = useState<AppointmentBookingData>({
-    doctorId: doctorId || "",
-    date: "",
-    time: "",
-    appointmentType: "OFFLINE",
-    notes: "",
-  });
 
-  const url = `${import.meta.env.VITE_BASE_URL}/api/patient`;
+  /**
+   * Appointment Form - using react-hook-form with Zod resolver
+   * Benefits:
+   * - No manual state management for form fields
+   * - Automatic validation on submit
+   * - Type-safe form data inferred from Zod schema
+   */
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<AppointmentFormData>({
+    resolver: zodResolver(appointmentSchema),
+    defaultValues: {
+      doctorId: doctorId || "",
+      date: "",
+      time: "",
+      appointmentType: "OFFLINE",
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     if (!user || user.role !== "PATIENT") {
@@ -79,9 +123,8 @@ export default function BookAppointmentPage() {
 
     const fetchDoctor = async () => {
       try {
-        const res = await axios.get<DoctorApiResponse>(
-          `${url}/fetchAllDoctors`,
-          { withCredentials: true }
+        const res = await api.get<DoctorApiResponse>(
+          `/api/patient/fetchAllDoctors`
         );
         
         if (res.data.success) {
@@ -93,12 +136,8 @@ export default function BookAppointmentPage() {
             navigate("/doctors");
           }
         }
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          toast.error(err.response.data?.message || "Failed to fetch doctor details");
-        } else {
-          toast.error("An unexpected error occurred");
-        }
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to fetch doctor details");
         navigate("/doctors");
       } finally {
         setLoading(false);
@@ -108,31 +147,19 @@ export default function BookAppointmentPage() {
     if (doctorId) {
       fetchDoctor();
     }
-  }, [doctorId, user, navigate, url]);
+  }, [doctorId, user, navigate]);
 
-  const handleInputChange = (field: keyof AppointmentBookingData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.date || !formData.time) {
-      toast.error("Please select both date and time");
-      return;
-    }
-
+  /**
+   * Handle form submission - simplified with react-hook-form
+   * Validation is handled automatically by zodResolver
+   * No need for manual checks like "if (!formData.date || !formData.time)"
+   */
+  const onSubmit = async (data: AppointmentFormData) => {
     setBooking(true);
     
     try {
-      const res = await axios.post(
-        `${url}/book-direct-appointment`,
-        formData,
-        { withCredentials: true }
-      );
+      // Used centralized api instance and react-hook-form data
+      const res = await api.post(`/patient/book-direct-appointment`, data);
 
       if (res.data.success) {
         toast.success("Appointment request sent successfully! You will be notified once the doctor responds.");
@@ -192,7 +219,7 @@ export default function BookAppointmentPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pt-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
@@ -280,25 +307,33 @@ export default function BookAppointmentPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Form using react-hook-form's handleSubmit */}
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Hidden field to register doctorId so it's included in form submission */}
+                    <input type="hidden" {...register("doctorId")} />
+                    
                     <div className="grid md:grid-cols-2 gap-4">
+                      {/* Date field - using register() */}
                       <div className="space-y-2">
                         <Label htmlFor="date">Date</Label>
                         <Input
                           id="date"
                           type="date"
-                          value={formData.date}
-                          onChange={(e) => handleInputChange("date", e.target.value)}
+                          {...register("date")}
                           min={new Date().toISOString().split('T')[0]}
-                          required
                         />
+                        {/* Display validation error from Zod schema */}
+                        {errors.date && (
+                          <p className="text-sm text-red-500">{errors.date.message}</p>
+                        )}
                       </div>
 
+                      {/* Time field - using setValue and watch for Select component */}
                       <div className="space-y-2">
                         <Label htmlFor="time">Time</Label>
                         <Select
-                          value={formData.time}
-                          onValueChange={(value) => handleInputChange("time", value)}
+                          value={watch("time")}
+                          onValueChange={(value) => setValue("time", value, { shouldValidate: true, shouldDirty: true })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select time" />
@@ -311,15 +346,20 @@ export default function BookAppointmentPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {/* Display validation error from Zod schema */}
+                        {errors.time && (
+                          <p className="text-sm text-red-500">{errors.time.message}</p>
+                        )}
                       </div>
                     </div>
 
+                    {/* Appointment Type - using setValue and watch for Select component */}
                     <div className="space-y-2">
                       <Label htmlFor="appointmentType">Appointment Type</Label>
                       <Select
-                        value={formData.appointmentType}
+                        value={watch("appointmentType")}
                         onValueChange={(value: "ONLINE" | "OFFLINE") => 
-                          handleInputChange("appointmentType", value)
+                          setValue("appointmentType", value, { shouldValidate: true, shouldDirty: true })
                         }
                       >
                         <SelectTrigger>
@@ -340,15 +380,19 @@ export default function BookAppointmentPage() {
                           </SelectItem>
                         </SelectContent>
                       </Select>
+                      {/* Display validation error from Zod schema */}
+                      {errors.appointmentType && (
+                        <p className="text-sm text-red-500">{errors.appointmentType.message}</p>
+                      )}
                     </div>
 
+                    {/* Notes field - using register() */}
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes (Optional)</Label>
                       <Textarea
                         id="notes"
                         placeholder="Any specific concerns or symptoms you'd like to discuss..."
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange("notes", e.target.value)}
+                        {...register("notes")}
                         rows={4}
                       />
                     </div>

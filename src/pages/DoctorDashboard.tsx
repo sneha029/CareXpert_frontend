@@ -36,28 +36,11 @@ import {
   SelectValue as _SelectValue,
 } from "../components/ui/select";
 import { ScrollArea as _ScrollArea } from "../components/ui/scroll-area";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authstore";
-
-type Appointment = {
-  id: string;
-  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
-  appointmentType: 'ONLINE' | 'OFFLINE';
-  date: string;
-  time: string;
-  notes?: string;
-  consultationFee?: number;
-  createdAt: string;
-  updatedAt: string;
-  patient: {
-    id: string;
-    name: string;
-    profilePicture?: string;
-    email: string;
-    medicalHistory?: string;
-  };
-};
+import { Appointment } from "@/types";
 
 type AppointmentApiResponse = {
   statusCode: number;
@@ -68,10 +51,8 @@ type AppointmentApiResponse = {
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
-  // const { user, isLoading } = useAuth() // Assuming a different auth context for now
   const user = useAuthStore((state) => state.user);
-  // const user = { name: "Dr. John Smith", role: "doctor" }; // Dummy user for UI demonstration
-  const isLoading = false; // Assume loading is false for dummy data
+  const isLoading = useAuthStore((state) => state.isLoading);
   const [_selectedTimeSlot, _setSelectedTimeSlot] = useState(""); // Keep this state for future UI
   const [_searchQuery, _setSearchQuery] = useState(""); // Keep this state for future UI
 
@@ -80,8 +61,6 @@ export default function DoctorDashboard() {
     Appointment[]
   >([]);
 
-  const url = `${import.meta.env.VITE_BASE_URL}/api/doctor`;
-  // Redirect if not logged in or not a doctor (using dummy logic for now)
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "DOCTOR")) {
       navigate("/auth/login"); // Use react-router-dom navigate
@@ -91,8 +70,8 @@ export default function DoctorDashboard() {
   useEffect(() => {
     async function fetchAppointments() {
       try {
-        const res = await axios.get<AppointmentApiResponse>(
-          `${url}/all-appointments`,
+        const res = await api.get<AppointmentApiResponse>(
+          `/doctor/all-appointments`,
           { withCredentials: true }
         );
         if (res.data.success) {
@@ -258,19 +237,19 @@ export default function DoctorDashboard() {
                         <Avatar>
                           <AvatarImage
                             src={
-                              appointment.patient.profilePicture || "/placeholder.svg"
+                              appointment.patient?.profilePicture || "/placeholder.svg"
                             }
                           />
                           <AvatarFallback>
-                            {appointment.patient.name
+                            {appointment.patient?.name
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("") ?? "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold text-gray-900 dark:text-white">
-                            {appointment.patient.name}
+                            {appointment.patient?.name ?? "Unknown"}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {new Date(appointment.date).toLocaleDateString("en-US")} at {appointment.time}
@@ -336,19 +315,19 @@ export default function DoctorDashboard() {
                         <Avatar>
                           <AvatarImage
                             src={
-                              appointment.patient.profilePicture || "/placeholder.svg"
+                              appointment.patient?.profilePicture || "/placeholder.svg"
                             }
                           />
                           <AvatarFallback>
-                            {appointment.patient.name
+                            {appointment.patient?.name
                               .split(" ")
                               .map((n) => n[0])
-                              .join("")}
+                              .join("") ?? "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h4 className="font-semibold text-gray-900 dark:text-white">
-                            {appointment.patient.name}
+                            {appointment.patient?.name ?? "Unknown"}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300">
                             {new Date(appointment.date).toLocaleDateString("en-US")} at {appointment.time}

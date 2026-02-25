@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Stethoscope, LogOut, User, Sun, Moon } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
+import { memo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +13,7 @@ import {
 } from "./ui/dropdown-menu";
 import { useTheme } from "@/context/theme-context";
 
-export function Navbar() {
+export const Navbar = memo(function Navbar() {
   const user = useAuthStore((state) => state.user);
 
   const logout = useAuthStore((state) => state.logout);
@@ -146,4 +147,4 @@ export function Navbar() {
       </div>
     </nav>
   );
-}
+});

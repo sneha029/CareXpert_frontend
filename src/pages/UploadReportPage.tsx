@@ -9,6 +9,7 @@ import {
 } from "../components/ui/card";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../components/ui/alert";
+import { api } from "@/lib/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { Badge } from "../components/ui/badge";
@@ -16,7 +17,7 @@ import { Badge } from "../components/ui/badge";
 export default function UploadReportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [, setReportId] = useState<string | null>(null);
+  const [_reportId, setReportId] = useState<string | null>(null);
   const [status, setStatus] = useState<
     "IDLE" | "PROCESSING" | "COMPLETED" | "FAILED"
   >("IDLE");
@@ -24,7 +25,6 @@ export default function UploadReportPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const pollRef = useRef<number | null>(null);
-  const apiBase = `${import.meta.env.VITE_BASE_URL}/api`;
   const LS_REPORT_STATE_KEY = "report-analyzer-state";
   const LS_LAST_RESULT_KEY = "report-analyzer-last";
 
@@ -76,7 +76,7 @@ export default function UploadReportPage() {
     stopPolling();
     pollRef.current = window.setInterval(async () => {
       try {
-        const res = await axios.get(`${apiBase}/report/${id}`, {
+        const res = await api.get(`/report/${id}`, {
           withCredentials: true,
         });
         if (res.data?.success) {
@@ -103,7 +103,7 @@ export default function UploadReportPage() {
     }, 2000);
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     if (!file) return;
     setErrorMessage(null);
     setResult(null);
@@ -114,14 +114,13 @@ export default function UploadReportPage() {
       const form = new FormData();
       form.append("report", file);
 
-      const res = await axios.post(`${apiBase}/report`, form, {
+      const res = await api.post(`/report`, form, {
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (res.data?.success && res.data?.data?.reportId) {
         const id = res.data.data.reportId as string;
-        setReportId(id);
         startPolling(id);
         toast.message("Report uploaded", {
           description: "Analyzing in background...",
@@ -129,11 +128,13 @@ export default function UploadReportPage() {
       } else {
         throw new Error(res.data?.message || "Upload failed");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsUploading(false);
       setStatus("FAILED");
       const msg =
-        err?.response?.data?.message || err?.message || "Upload failed";
+        axios.isAxiosError(err)
+          ? err.response?.data?.message || err.message
+          : err instanceof Error ? err.message : "Upload failed";
       setErrorMessage(msg);
       toast.error(msg);
     }

@@ -3,7 +3,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Bell, Check, CheckCheck, Calendar, Stethoscope } from "lucide-react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { relativeTime } from "@/lib/utils";
 
@@ -28,8 +28,8 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}/api/user/notifications`,
+      const response = await api.get(
+        `/user/notifications`,
         { withCredentials: true }
       );
 
@@ -47,8 +47,8 @@ export default function NotificationsPage() {
   const markAsRead = async (notificationId: string) => {
     setMarkingAsRead(notificationId);
     try {
-      await axios.put(
-        `${import.meta.env.VITE_BASE_URL}/api/user/notifications/${notificationId}/read`,
+      await api.put(
+        `/user/notifications/${notificationId}/read`,
         {},
         { withCredentials: true }
       );
@@ -71,8 +71,8 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      await axios.put(
-        `${import.meta.env.VITE_BASE_URL}/api/user/notifications/mark-all-read`,
+      await api.put(
+        `/user/notifications/mark-all-read`,
         {},
         { withCredentials: true }
       );

@@ -86,7 +86,7 @@ export default function DoctorsPage() {
     notes: "",
   });
   const [isBooking, setIsBooking] = useState(false);
-const [bookingError, setBookingError] = useState("");
+  const [bookingError, setBookingError] = useState("");
   const user = useAuthStore((state) => state.user);
   /* ================= EFFECTS ================= */
 
@@ -166,6 +166,7 @@ const [bookingError, setBookingError] = useState("");
       return;
     }
     setSelectedDoctor(doctor);
+    setBookingError("");
     setBookingData({
       doctorId: doctor.id,
       date: "",
@@ -183,22 +184,21 @@ const [bookingError, setBookingError] = useState("");
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-   if (isBooking) return; // Prevent duplicate submissions
+    if (isBooking) return;
 
-setBookingError("");
+    setBookingError("");
 
-// Strong validation
-if (!bookingData.date || !bookingData.time) {
-  setBookingError("Please select both date and time.");
-  return;
-}
+    if (!bookingData.date || !bookingData.time) {
+      setBookingError("Please select both date and time.");
+      return;
+    }
 
-// Prevent past date booking
-const today = new Date().toISOString().split("T")[0];
-if (bookingData.date < today) {
-  setBookingError("You cannot book an appointment in the past.");
-  return;
-}
+    const today = new Date().toISOString().split("T")[0];
+    if (bookingData.date < today) {
+      setBookingError("You cannot book an appointment in the past.");
+      return;
+    }
+
     setIsBooking(true);
     try {
       const res = await api.post(
@@ -212,11 +212,11 @@ if (bookingData.date < today) {
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
-     setBookingError(
-  err.response.data?.message || "Failed to book an appointment"
-);
+        setBookingError(
+          err.response.data?.message || "Failed to book an appointment"
+        );
       } else {
-        toast.error("An unexpected error occurred");
+        setBookingError("An unexpected error occurred");
       }
     } finally {
       setIsBooking(false);
@@ -358,10 +358,7 @@ if (bookingData.date < today) {
           </DialogHeader>
 
           {selectedDoctor && (
-            <form
-  onSubmit={handleBookingSubmit}
-  className="space-y-4"
->
+            <form onSubmit={handleBookingSubmit} className="space-y-4">
               <Input
                 type="date"
                 disabled={isBooking}
@@ -388,29 +385,28 @@ if (bookingData.date < today) {
                   ))}
                 </SelectContent>
               </Select>
-{bookingError && (
-  <p className="text-sm text-red-500">{bookingError}</p>
-)}
+              {bookingError && (
+                <p className="text-sm text-red-500">{bookingError}</p>
+              )}
               <DialogFooter>
-  <Button
-    variant="outline"
-    onClick={closeBookingDialog}
-    disabled={isBooking}
-  >
-    Cancel
-  </Button>
-
-  <Button type="submit" disabled={isBooking}>
-    {isBooking ? (
-      <span className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Booking...
-      </span>
-    ) : (
-      "Book"
-    )}
-  </Button>
-</DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={closeBookingDialog}
+                  disabled={isBooking}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isBooking}>
+                  {isBooking ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Booking...
+                    </span>
+                  ) : (
+                    "Book"
+                  )}
+                </Button>
+              </DialogFooter>
             </form>
           )}
         </DialogContent>

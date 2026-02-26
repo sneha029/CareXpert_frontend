@@ -29,8 +29,9 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
       setUser: (user) => set({ user }),
       logout: () => {
-        set({ user: null }),
-        disconnectSocket(),
+        // Disconnect socket first, then clear user state and persisted storage.
+        disconnectSocket();
+        set({ user: null });
         localStorage.removeItem('auth-storage');
       },
       login: async (email: string, password: string) => {

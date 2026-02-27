@@ -26,6 +26,8 @@ const UploadReportPage = lazy(() => import("./pages/UploadReportPage"));
 const AppointmentHistoryPage = lazy(() => import("./pages/AppointmentHistoryPage"));
 const AppointmentStatusPage = lazy(() => import("./pages/AppointmentStatusPage"));
 const PharmacyPage = lazy(() => import("./pages/PharmacyPage"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
@@ -49,6 +51,14 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+<<<<<<< fix/mobile-responsiveness
+=======
+        <Route path="/" element={<Layout><HomePage /></Layout>} />
+        <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+        <Route path="/auth/*" element={<AuthPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+>>>>>>> main
 
         {/* Public Layout Routes */}
         <Route element={<Layout />}>

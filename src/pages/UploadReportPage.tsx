@@ -62,7 +62,58 @@ export default function UploadReportPage() {
     }
   };
 
+  const startPolling = (id: string) => {
+    stopPolling();
+
+    let errorCount = 0;
+    const maxErrors = 3;
+
+    pollRef.current = window.setInterval(async () => {
+      try {
+        const res = await api.get(`/report/${id}`, {
+          withCredentials: true,
+        });
+
+        // Reset error count on success
+        errorCount = 0;
+
+        if (res.data?.success) {
+          const r = res.data.data;
+          if (r.status === "COMPLETED") {
+            setStatus("COMPLETED");
+            setResult(r);
+            stopPolling(); // ✅ Stop on success
+            setIsUploading(false);
+            notify.success("Report analyzed successfully");
+          } else if (r.status === "FAILED") {
+            setStatus("FAILED");
+            setErrorMessage(r.error || "Analysis failed");
+            stopPolling(); // ✅ Stop on failure
+            setIsUploading(false);
+            notify.error(r.error || "Report analysis failed");
+          } else {
+            setStatus("PROCESSING");
+          }
+        }
+      } catch (err) {
+        errorCount++;
+        console.error("Polling error:", err);
+
+        // ✅ Stop after multiple errors
+        if (errorCount >= maxErrors) {
+          stopPolling();
+          setStatus("FAILED");
+          setErrorMessage("Connection error - please try again");
+          setIsUploading(false); // ensure UI unlocks if polling finally dies
+          notify.error("Failed to check report status");
+        }
+      }
+    }, 2000);
+  };
+
+  // ✅ Comprehensive cleanup on mount/unmount
   useEffect(() => {
+    // Load saved state
     try {
       const saved = localStorage.getItem(LS_REPORT_STATE_KEY);
       if (saved) {
@@ -87,39 +138,20 @@ export default function UploadReportPage() {
       }
     } catch { }
 
-    return () => stopPolling();
+    // ✅ Always cleanup on unmount
+    return () => {
+      stopPolling();
+      // Clear any pending state updates
+      setIsUploading(false);
+    };
   }, []);
 
-  const startPolling = (id: string) => {
-    stopPolling();
-    pollRef.current = window.setInterval(async () => {
-      try {
-        const res = await api.get(`/report/${id}`, {
-          withCredentials: true,
-        });
-        if (res.data?.success) {
-          const r = res.data.data;
-          if (r.status === "COMPLETED") {
-            setStatus("COMPLETED");
-            setResult(r);
-            stopPolling();
-            setIsUploading(false);
-            notify.success("Report analyzed successfully");
-          } else if (r.status === "FAILED") {
-            setStatus("FAILED");
-            setErrorMessage(r.error || "Analysis failed");
-            stopPolling();
-            setIsUploading(false);
-            notify.error(r.error || "Report analysis failed");
-          } else {
-            setStatus("PROCESSING");
-          }
-        }
-      } catch (err) {
-        // keep polling briefly; show toast once
-      }
-    }, 2000);
-  };
+  // ✅ Also cleanup when file changes
+  useEffect(() => {
+    if (file) {
+      stopPolling(); // Stop any existing polling when new file selected
+    }
+  }, [file]);
 
   const handleSubmit = async () => {
     if (!file) return;

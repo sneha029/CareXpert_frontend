@@ -36,3 +36,15 @@ export interface Appointment {
   patient?: User; // Depending on if you're fetching from Doctor or Patient side
   doctor?: Doctor;
 }
+
+export interface BlockedDate {
+  id: string;
+  doctorId: string;
+  date: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  reason?: string | null;
+  isFullDay: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}

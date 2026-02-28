@@ -56,7 +56,7 @@ export default function DoctorsPage() {
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [doctors, setDoctors] = useState<FindDoctors[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   // Booking dialog state
   const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] =
@@ -252,6 +252,13 @@ export default function DoctorsPage() {
       setIsBooking(false);
     }
   };
+  const handleApplyFilters = async () => {
+  if (isApplyingFilters) return;
+  setIsApplyingFilters(true);
+  setTimeout(() => {
+    setIsApplyingFilters(false);
+  }, 500);
+};
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -339,9 +346,15 @@ export default function DoctorsPage() {
                 <SelectItem value="fee-desc">Fee High to Low</SelectItem>
               </SelectContent>
             </Select>
-            <Button>
-              <Filter className="h-4 w-4 mr-2" /> Apply
-            </Button>
+            <Button onClick={handleApplyFilters} disabled={isApplyingFilters}>
+            {isApplyingFilters ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    <>
+      <Filter className="h-4 w-4 mr-2" /> Apply
+    </>
+  )}
+</Button>
           </CardContent>
         </Card>
 

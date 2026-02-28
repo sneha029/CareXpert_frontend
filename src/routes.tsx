@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { Routes, Route, Navigate} from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/layout";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuthStore } from "./store/authstore";
@@ -81,7 +81,6 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-
         {/* ---------- Public Layout ---------- */}
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
@@ -94,14 +93,13 @@ export default function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ---------- Protected Routes ---------- */}
-       <Route
-  element={
-    <ProtectedRoute>
-      <DashboardLayout />
-    </ProtectedRoute>
-  }
->
-        
+        <Route
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
           {/* Dashboards */}
           <Route path="/dashboard/patient" element={<PatientDashboard />} />
           <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
@@ -111,10 +109,7 @@ export default function AppRoutes() {
           <Route path="/appointment-history" element={<AppointmentHistoryPage />} />
           <Route path="/appointment-status" element={<AppointmentStatusPage />} />
           <Route path="/doctor/appointments" element={<DoctorAppointmentsPage />} />
-          <Route
-            path="/doctor/appointment-history"
-            element={<DoctorAppointmentHistoryPage />}
-          />
+          <Route path="/doctor/appointment-history" element={<DoctorAppointmentHistoryPage />} />
 
           {/* Other Features */}
           <Route path="/prescriptions" element={<PrescriptionsPage />} />
@@ -133,7 +128,6 @@ export default function AppRoutes() {
 
         {/* ---------- 404 ---------- */}
         <Route path="*" element={<NotFound />} />
-
       </Routes>
     </Suspense>
   );

@@ -417,6 +417,8 @@ export default function ChatPage() {
         bio: "",
         languages: [],
         consultationFee: 0,
+        averageRating: 0,
+        totalReviews: 0,
       },
     });
     setMessages([]);

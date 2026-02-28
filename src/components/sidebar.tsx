@@ -13,6 +13,7 @@ import {
   X,
   Bell,
   MessageCircle,
+  Star,
   BookTemplate
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
@@ -73,6 +74,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
         { href: "/doctor/prescriptions", label: "Prescriptions", icon: Pill },
         { href: "/doctor/prescription-templates", label: "Prescription Templates", icon: BookTemplate },
         { href: "/doctor/reports", label: "Patient Reports", icon: FileText },
+        { href: "/doctor/reviews", label: "My Reviews", icon: Star },
         { href: "/chat", label: "Chat", icon: MessageCircle },
         { href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount },
         { href: "/profile", label: "Profile", icon: User },
@@ -89,6 +91,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
         { href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount },
         { href: "/pharmacy", label: "Pharmacy Near Me", icon: MapPin },
         { href: "/appointment-history", label: "Appointment History", icon: Clock },
+        { href: "/my-reviews", label: "My Reviews", icon: Star },
         { href: "/profile", label: "Profile", icon: User },
       ];
     }

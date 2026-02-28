@@ -25,6 +25,7 @@ import {
   Heart,
   Loader2,
   Stethoscope,
+  Star,
 } from "lucide-react";
 import { patientAPI, NormalizedDoctor } from "@/lib/services";
 import { api } from "@/lib/api";
@@ -389,6 +390,11 @@ export default function DoctorsPage() {
                       </h3>
                       <p className="text-blue-600">{doctor.specialty}</p>
                       <p className="text-sm">{doctor.clinicLocation}</p>
+                      <div className="flex items-center gap-1 mt-1 text-sm text-amber-600">
+                        <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
+                        <span>{doctor.averageRating.toFixed(1)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">({doctor.totalReviews} reviews)</span>
+                      </div>
                     </div>
                   </div>
 

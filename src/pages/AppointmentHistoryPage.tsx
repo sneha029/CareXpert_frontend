@@ -2,13 +2,23 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Calendar, Clock, User, MapPin, FileText, Search } from "lucide-react";
+import { Calendar, Clock, User, MapPin, FileText, Search, Star, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { api } from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { notify } from "@/lib/toast";
 import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { reviewAPI } from "@/lib/services";
 import {
   Select,
   SelectContent,
@@ -28,6 +38,14 @@ type Appointment = {
   createdAt: string;
   updatedAt: string;
   prescriptionId?: string | null;
+  review?: {
+    id: string;
+    rating: number;
+    comment?: string | null;
+    isAnonymous: boolean;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
   doctor: {
     id: string;
     name: string;
@@ -38,6 +56,8 @@ type Appointment = {
     education?: string;
     bio?: string;
     languages: string[];
+    averageRating: number;
+    totalReviews: number;
   };
 };
 
@@ -54,6 +74,12 @@ export default function AppointmentHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewAnonymous, setReviewAnonymous] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const user = useAuthStore((state) => state.user);
   useEffect(() => {
@@ -86,6 +112,129 @@ export default function AppointmentHistoryPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openReviewDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setReviewRating(appointment.review?.rating ?? 5);
+    setReviewComment(appointment.review?.comment ?? "");
+    setReviewAnonymous(Boolean(appointment.review?.isAnonymous));
+    setIsReviewDialogOpen(true);
+  };
+
+  const closeReviewDialog = () => {
+    if (isSubmittingReview) {
+      return;
+    }
+    setIsReviewDialogOpen(false);
+    setSelectedAppointment(null);
+  };
+
+  const updateAppointmentReviewLocally = (appointmentId: string, review: Appointment["review"]) => {
+    setAppointments((prev) =>
+      prev.map((appointment) =>
+        appointment.id === appointmentId
+          ? {
+              ...appointment,
+              review,
+            }
+          : appointment
+      )
+    );
+  };
+
+  const submitReview = async () => {
+    if (!selectedAppointment) {
+      return;
+    }
+
+    if (reviewRating < 1 || reviewRating > 5) {
+      notify.error("Please select a rating between 1 and 5");
+      return;
+    }
+
+    if (reviewComment.trim().length > 1000) {
+      notify.error("Comment must be 1000 characters or fewer");
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      const payload = {
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        isAnonymous: reviewAnonymous,
+      };
+
+      if (selectedAppointment.review?.id) {
+        const response = await reviewAPI.updateReview(selectedAppointment.review.id, payload);
+        if (response.data.success) {
+          const updated = response.data.data;
+          updateAppointmentReviewLocally(selectedAppointment.id, {
+            id: updated.id,
+            rating: updated.rating,
+            comment: updated.comment,
+            isAnonymous: updated.isAnonymous,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+          });
+          notify.success("Review updated successfully");
+          closeReviewDialog();
+        }
+        return;
+      }
+
+      const response = await reviewAPI.createReview({
+        appointmentId: selectedAppointment.id,
+        ...payload,
+      });
+
+      if (response.data.success) {
+        const created = response.data.data;
+        updateAppointmentReviewLocally(selectedAppointment.id, {
+          id: created.id,
+          rating: created.rating,
+          comment: created.comment,
+          isAnonymous: created.isAnonymous,
+          createdAt: created.createdAt,
+          updatedAt: created.updatedAt,
+        });
+        notify.success("Review submitted successfully");
+        closeReviewDialog();
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        notify.error(error.response.data?.message || "Failed to save review");
+      } else {
+        notify.error("Failed to save review");
+      }
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const deleteReview = async () => {
+    if (!selectedAppointment?.review?.id) {
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      const response = await reviewAPI.deleteReview(selectedAppointment.review.id);
+      if (response.data.success) {
+        updateAppointmentReviewLocally(selectedAppointment.id, null);
+        notify.success("Review deleted successfully");
+        closeReviewDialog();
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        notify.error(error.response.data?.message || "Failed to delete review");
+      } else {
+        notify.error("Failed to delete review");
+      }
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -175,6 +324,7 @@ export default function AppointmentHistoryPage() {
       completed: appointments.filter(a => a.status === 'COMPLETED').length,
       cancelled: appointments.filter(a => a.status === 'CANCELLED').length,
       rejected: appointments.filter(a => a.status === 'REJECTED').length,
+      reviewed: appointments.filter(a => a.review?.id).length,
     };
     return counts;
   };
@@ -203,7 +353,7 @@ export default function AppointmentHistoryPage() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mb-8">
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -261,6 +411,16 @@ export default function AppointmentHistoryPage() {
                 {statusCounts.rejected}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">Rejected</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-amber-600">
+                {statusCounts.reviewed}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">Reviewed</div>
             </div>
           </CardContent>
         </Card>
@@ -393,6 +553,37 @@ export default function AppointmentHistoryPage() {
                     </div>
                   )}
 
+                  {appointment.status === "COMPLETED" && (
+                    <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/60">
+                      <div className="flex items-center justify-between gap-3">
+                        {appointment.review ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1 text-amber-600">
+                              {Array.from({ length: 5 }, (_, idx) => (
+                                <Star
+                                  key={idx}
+                                  className={`h-4 w-4 ${idx < appointment.review!.rating ? 'fill-amber-400 text-amber-500' : 'text-gray-300 dark:text-gray-600'}`}
+                                />
+                              ))}
+                              <span className="ml-2 text-xs text-gray-600 dark:text-gray-400">Your review</span>
+                            </div>
+                            {appointment.review.comment && (
+                              <p className="text-sm text-gray-700 dark:text-gray-300">{appointment.review.comment}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
+                            Share your experience with this doctor.
+                          </p>
+                        )}
+
+                        <Button variant="outline" onClick={() => openReviewDialog(appointment)}>
+                          {appointment.review ? "Edit Review" : "Add Review"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {appointment.prescriptionId && (
                     <div className="mt-4">
                       <Button
@@ -409,6 +600,81 @@ export default function AppointmentHistoryPage() {
           ))
         )}
       </div>
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={(open) => (open ? setIsReviewDialogOpen(true) : closeReviewDialog())}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedAppointment?.review ? "Update Review" : "Write a Review"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Rating</Label>
+              <div className="flex items-center gap-2 mt-2">
+                {Array.from({ length: 5 }, (_, idx) => {
+                  const starValue = idx + 1;
+                  return (
+                    <button
+                      key={starValue}
+                      type="button"
+                      onClick={() => setReviewRating(starValue)}
+                      className="rounded-md p-1"
+                    >
+                      <Star
+                        className={`h-6 w-6 ${reviewRating >= starValue ? 'fill-amber-400 text-amber-500' : 'text-gray-300 dark:text-gray-600'}`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="review-comment">Comment (optional, max 1000 chars)</Label>
+              <Textarea
+                id="review-comment"
+                value={reviewComment}
+                onChange={(event) => setReviewComment(event.target.value)}
+                maxLength={1000}
+                rows={4}
+                placeholder="Tell others about your consultation experience"
+              />
+              <p className="text-xs text-gray-500 mt-1">{reviewComment.length}/1000</p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={reviewAnonymous}
+                onChange={(event) => setReviewAnonymous(event.target.checked)}
+              />
+              Post review anonymously
+            </label>
+          </div>
+
+          <DialogFooter className="flex items-center justify-between">
+            {selectedAppointment?.review && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={deleteReview}
+                disabled={isSubmittingReview}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <div className="ml-auto flex gap-2">
+              <Button type="button" variant="outline" onClick={closeReviewDialog} disabled={isSubmittingReview}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={submitReview} disabled={isSubmittingReview}>
+                {isSubmittingReview ? "Saving..." : selectedAppointment?.review ? "Update" : "Submit"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

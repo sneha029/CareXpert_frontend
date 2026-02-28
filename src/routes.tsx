@@ -15,6 +15,7 @@ const DoctorAppointmentsPage = lazy(() => import("./pages/DoctorAppointmentsPage
 const DoctorAppointmentHistoryPage = lazy(() => import("./pages/DoctorAppointmentHistoryPage"));
 const DoctorPrescriptionsPage = lazy(() => import("./pages/DoctorPrescriptionsPage"));
 const DoctorReportsPage = lazy(() => import("./pages/DoctorReportsPage"));
+const DoctorReviewsPage = lazy(() => import("./pages/DoctorReviewsPage"));
 const PrescriptionTemplatesPage = lazy(() => import("./pages/PrescriptionTemplatesPage"));
 const PrescriptionsPage = lazy(() => import("./pages/PrescriptionsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
@@ -27,6 +28,7 @@ const DoctorDashboard = lazy(() => import("./pages/DoctorDashboard"));
 const StartCall = lazy(() => import("./pages/StartCall"));
 const UploadReportPage = lazy(() => import("./pages/UploadReportPage"));
 const AppointmentHistoryPage = lazy(() => import("./pages/AppointmentHistoryPage"));
+const MyReviewsPage = lazy(() => import("./pages/MyReviewsPage"));
 const AppointmentStatusPage = lazy(() => import("./pages/AppointmentStatusPage"));
 const PharmacyPage = lazy(() => import("./pages/PharmacyPage"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
@@ -84,6 +86,9 @@ export default function AppRoutes() {
         <Route path="/doctor/reports" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DoctorReportsPage />} />
         </Route>
+        <Route path="/doctor/reviews" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorReviewsPage />} />
+        </Route>
         <Route path="/prescriptions" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<PrescriptionsPage />} />
         </Route>
@@ -113,6 +118,9 @@ export default function AppRoutes() {
         </Route>
         <Route path="/appointment-history" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<AppointmentHistoryPage />} />
+        </Route>
+        <Route path="/my-reviews" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<MyReviewsPage />} />
         </Route>
         <Route path="/appointment-status" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<AppointmentStatusPage />} />

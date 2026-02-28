@@ -143,6 +143,8 @@ export interface NormalizedDoctor {
     bio: string;
     languages: string[];
     consultationFee: number;
+    averageRating: number;
+    totalReviews: number;
     name: string;
     profilePicture: string;
 }
@@ -160,6 +162,8 @@ function normalizeDoctorData(doctor: RawDoctor): NormalizedDoctor {
         // Prefer top-level fields (future-proof); fall back to nested user object
         name: doctor.name ?? doctor.user?.name ?? "",
         profilePicture: doctor.profilePicture ?? doctor.user?.profilePicture ?? "",
+        averageRating: Number(doctor.averageRating ?? 0),
+        totalReviews: Number(doctor.totalReviews ?? 0),
     };
 }
 
@@ -265,6 +269,93 @@ export const doctorAPI = {
     /** GET /doctor/prescription-templates/tags */
     getPrescriptionTemplateTags: () =>
         api.get<ApiResponse>("/doctor/prescription-templates/tags"),
+};
+
+// ---------------------------------------------------------------------------
+// Reviews
+// ---------------------------------------------------------------------------
+export interface ReviewItem {
+    id: string;
+    appointmentId: string;
+    patientId: string;
+    doctorId: string;
+    rating: number;
+    comment?: string | null;
+    isAnonymous: boolean;
+    createdAt: string;
+    updatedAt: string;
+    doctor: {
+        id: string;
+        specialty: string;
+        clinicLocation: string;
+        averageRating: number;
+        totalReviews: number;
+        user: {
+            name: string;
+            profilePicture?: string;
+        };
+    };
+    appointment: {
+        id: string;
+        date: string;
+        time: string;
+        status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+    };
+}
+
+export interface DoctorReviewItem {
+    id: string;
+    appointmentId: string;
+    patientId: string;
+    doctorId: string;
+    rating: number;
+    comment?: string | null;
+    isAnonymous: boolean;
+    createdAt: string;
+    updatedAt: string;
+    patient: {
+        id: string;
+        user: {
+            name: string;
+            profilePicture?: string;
+        };
+    };
+    appointment: {
+        id: string;
+        date: string;
+        time: string;
+        status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "REJECTED";
+    };
+}
+
+export interface CreateReviewPayload {
+    appointmentId: string;
+    rating: number;
+    comment?: string;
+    isAnonymous?: boolean;
+}
+
+export interface UpdateReviewPayload {
+    rating?: number;
+    comment?: string;
+    isAnonymous?: boolean;
+}
+
+export const reviewAPI = {
+    createReview: (payload: CreateReviewPayload) =>
+        api.post<ApiResponse<ReviewItem>>("/review", payload),
+
+    getMyReviews: () =>
+        api.get<ApiResponse<ReviewItem[]>>("/review/my"),
+
+    getDoctorReviews: () =>
+        api.get<ApiResponse<DoctorReviewItem[]>>("/review/doctor"),
+
+    updateReview: (reviewId: string, payload: UpdateReviewPayload) =>
+        api.patch<ApiResponse<ReviewItem>>(`/review/${reviewId}`, payload),
+
+    deleteReview: (reviewId: string) =>
+        api.delete<ApiResponse>(`/review/${reviewId}`),
 };
 
 // ---------------------------------------------------------------------------

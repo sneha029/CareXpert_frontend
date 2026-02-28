@@ -245,6 +245,11 @@ export default function BookAppointmentPage() {
                     <span>${doctor.consultationFee} consultation fee</span>
                   </div>
 
+                  <div className="flex items-center gap-2 text-sm">
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-400" />
+                    <span>{doctor.averageRating.toFixed(1)} ({doctor.totalReviews} reviews)</span>
+                  </div>
+
                   {doctor.education && (
                     <div className="text-sm">
                       <p className="font-medium mb-1">Education:</p>

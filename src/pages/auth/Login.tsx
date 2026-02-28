@@ -132,7 +132,7 @@ export default function Login() {
             Welcome Back
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-300">
-            Sign in to your careXpert account
+            Sign in to your CareXpert account
           </CardDescription>
         </CardHeader>
         <CardContent>

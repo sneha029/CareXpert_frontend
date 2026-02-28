@@ -16,35 +16,42 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { motion } from "framer-motion";
+import ProgressChart from "@/components/ProgressChart";
 
 
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
 
- 
-  const isLoading = false; 
-
-  
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "PATIENT")) {
-      navigate("/auth/login"); 
+      navigate("/auth/login");
     }
   }, [user, isLoading, navigate]);
 
+  // Mock data for ProgressChart
+  const weeklyActivityData = [
+    { date: "Mon", activityCount: 34 },
+    { date: "Tue", activityCount: 41 },
+    { date: "Wed", activityCount: 38 },
+    { date: "Thu", activityCount: 52 },
+    { date: "Fri", activityCount: 46 },
+    { date: "Sat", activityCount: 29 },
+    { date: "Sun", activityCount: 33 },
+  ];
 
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Test data with mixed formats (tests normalization)
+  const mixedFormatData = [
+    { date: "Week 1", activity: 30 },
+    { day: "Week 2", count: 45 },
+    { date: "Week 3", value: 38 },
+    { date: "Week 4", activityCount: 52 },
+  ];
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           {/* Welcome Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -190,6 +197,48 @@ export default function PatientDashboard() {
                 </Card>
               </Link>
             </motion.div>
+          </motion.div>
+
+          {/* Activity Analytics */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              Activity Analytics
+            </h2>
+            
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Chart 1: Weekly Activity Progress */}
+              <Card>
+                <CardContent className="p-6">
+                  <ProgressChart 
+                    data={weeklyActivityData}
+                    title="Weekly Activity Progress"
+                    color="#3b82f6"
+                    showReferenceLine={true}
+                    referenceValue={40}
+                    referenceLabel="Weekly Target"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Chart 2: Monthly Trends */}
+              <Card>
+                <CardContent className="p-6">
+                  <ProgressChart 
+                    data={mixedFormatData}
+                    title="Monthly Trends"
+                    color="#10b981"
+                    showReferenceLine={true}
+                    referenceValue={45}
+                    referenceLabel="Goal"
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </motion.div>
 
           {/* Motivational Quote */}

@@ -12,9 +12,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import * as React from "react";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { notify } from "@/lib/toast";
 
-const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6}$/;
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -56,8 +57,13 @@ export default function ForgotPassword() {
         setEmailSent(true);
         notify.success("Reset link sent! Please check your email.");
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Failed to send reset email. Please try again.";
+    } catch (err: unknown) {
+      let errorMessage = "Failed to send reset email. Please try again.";
+      if (axios.isAxiosError(err) && err.response) {
+        errorMessage = err.response.data?.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       setError(errorMessage);
       notify.error(errorMessage);
     } finally {

@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { useTheme } from "@/context/theme-context";
+import { useTheme } from "@/context/useTheme";
 
 // ==========================================
 // TYPES & INTERFACES
@@ -27,7 +27,7 @@ interface RawActivityData {
   count?: number;
   value?: number;
   activityCount?: number;
-  [key: string]: any; // Allow additional fields
+  [key: string]: unknown; // Allow additional fields
 }
 
 /**
@@ -75,7 +75,7 @@ const normalizeActivityData = (
 
     // Extract activity count with multiple fallback keys
     // Priority: activityCount > activity > count > value > 0
-    let activityValue =
+    const activityValue =
       item.activityCount ?? item.activity ?? item.count ?? item.value ?? 0;
 
     // Ensure numeric coercion and handle edge cases
@@ -292,8 +292,6 @@ export default function ProgressChart({
   );
 }
 
-// ==========================================
-// EXPORT UTILITIES (for testing/debugging)
-// ==========================================
-export { normalizeActivityData, calculateYAxisDomain };
-export type { RawActivityData, NormalizedActivityData, ProgressChartProps };
+// Utilities are internal to this component file to avoid fast-refresh issues
+// (move to a separate file if you need to reuse them elsewhere)
+

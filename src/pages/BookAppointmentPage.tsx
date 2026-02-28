@@ -114,8 +114,14 @@ export default function BookAppointmentPage() {
             navigate("/doctors");
           }
         }
-      } catch (err: any) {
-        notify.error(err?.message || "Failed to fetch doctor details");
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response) {
+          notify.error(err.response.data?.message || "Failed to fetch doctor details");
+        } else if (err instanceof Error) {
+          notify.error(err.message);
+        } else {
+          notify.error("Failed to fetch doctor details");
+        }
         navigate("/doctors");
       } finally {
         setLoading(false);

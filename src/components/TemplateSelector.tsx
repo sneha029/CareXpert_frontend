@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileText, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -22,6 +22,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { doctorAPI } from "@/lib/services";
 import { toast } from "sonner";
 import axios from "axios";
+import { logger } from "@/lib/logger";
 import { PrescriptionTemplate } from "@/types";
 
 interface TemplateSelectorProps {
@@ -53,9 +54,32 @@ export default function TemplateSelector({
     }
   }, [isOpen]);
 
+  // memoize filter logic to satisfy exhaustive-deps rule
+  const filterTemplates = useCallback(() => {
+    let filtered = [...templates];
+
+    // Filter by tag
+    if (selectedTag !== "all") {
+      filtered = filtered.filter((t) => t.tags.includes(selectedTag));
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          t.name.toLowerCase().includes(query) ||
+          (t.description?.toLowerCase().includes(query) ?? false) ||
+          t.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
+    }
+
+    setFilteredTemplates(filtered);
+  }, [templates, searchQuery, selectedTag]);
+
   useEffect(() => {
     filterTemplates();
-  }, [templates, searchQuery, selectedTag]);
+  }, [filterTemplates]);
 
   const fetchTemplates = async () => {
     try {
@@ -84,31 +108,10 @@ export default function TemplateSelector({
         setAvailableTags(res.data.data as string[]);
       }
     } catch (err) {
-      console.error("Failed to fetch tags:", err);
+      logger.error("Failed to fetch tags:", err);
     }
   };
 
-  const filterTemplates = () => {
-    let filtered = [...templates];
-
-    // Filter by tag
-    if (selectedTag !== "all") {
-      filtered = filtered.filter((t) => t.tags.includes(selectedTag));
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(query) ||
-          (t.description?.toLowerCase().includes(query) ?? false) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
-    }
-
-    setFilteredTemplates(filtered);
-  };
 
   const handleSelectTemplate = () => {
     if (selectedTemplate) {

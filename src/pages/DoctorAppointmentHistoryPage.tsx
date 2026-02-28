@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { Input } from "../components/ui/input";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -73,9 +74,6 @@ export default function DoctorAppointmentHistoryPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    filterAppointments();
-  }, [appointments, searchTerm, statusFilter, dateFilter]);
 
   const fetchAppointmentHistory = async () => {
     try {
@@ -89,7 +87,7 @@ export default function DoctorAppointmentHistoryPage() {
         setAppointments(response.data.data);
       }
     } catch (error) {
-      console.error("Error fetching appointment history:", error);
+      logger.error("Error fetching appointment history:", error as Error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(error.response.data?.message || "Failed to fetch appointment history");
       } else {
@@ -100,7 +98,7 @@ export default function DoctorAppointmentHistoryPage() {
     }
   };
 
-  const filterAppointments = () => {
+  const filterAppointments = useCallback(() => {
     let filtered = [...appointments];
 
     // Search filter
@@ -116,7 +114,7 @@ export default function DoctorAppointmentHistoryPage() {
       filtered = filtered.filter(appointment => appointment.status === statusFilter);
     }
 
-    // Date filter
+    // Date filter with optional ranges
     if (dateFilter !== 'all') {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -151,7 +149,11 @@ export default function DoctorAppointmentHistoryPage() {
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFilteredAppointments(filtered);
-  };
+  }, [appointments, searchTerm, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    filterAppointments();
+  }, [filterAppointments]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {

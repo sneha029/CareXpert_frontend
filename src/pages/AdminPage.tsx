@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import {
@@ -31,13 +31,12 @@ import {
   Activity,
 } from "lucide-react";
 import { useAuthStore } from "../store/authstore";
+import { logger } from "@/lib/logger";
 
 export default function AdminPage() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const isLoading = useAuthStore((state) => state.isLoading);
-  const [_searchQuery, _setSearchQuery] = useState("");
-  const [_filterStatus, _setFilterStatus] = useState("all");
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== "ADMIN")) {
@@ -152,13 +151,13 @@ export default function AdminPage() {
     },
   ];
 
-  const handleApproveDoctor = (doctorId: number) => {
-    console.log("Approving doctor:", doctorId);
+  const handleApproveDoctor = () => {
+    logger.debug("Doctor approval initiated", { safe: true });
     alert("Doctor approved successfully!");
   };
 
-  const handleRejectDoctor = (doctorId: number) => {
-    console.log("Rejecting doctor:", doctorId);
+  const handleRejectDoctor = () => {
+    logger.debug("Doctor rejection initiated", { safe: true });
     alert("Doctor application rejected.");
   };
 
@@ -533,7 +532,7 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 className="w-full bg-green-600 hover:bg-green-700"
-                                onClick={() => handleApproveDoctor(request.id)}
+                                onClick={() => handleApproveDoctor()}
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Approve
@@ -542,7 +541,7 @@ export default function AdminPage() {
                                 variant="destructive"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => handleRejectDoctor(request.id)}
+                                onClick={() => handleRejectDoctor()}
                               >
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Reject

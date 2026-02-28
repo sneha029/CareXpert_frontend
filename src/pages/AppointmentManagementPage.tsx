@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 
 type Appointment = {
   id: string;
@@ -115,7 +116,7 @@ export default function AppointmentManagementPage() {
   }, []);
 
   useEffect(() => {
-    console.log(upcomingAppointments);
+    logger.debug("Upcoming appointments updated", { count: upcomingAppointments?.length || 0 });
   }, [upcomingAppointments]);
 
   if (isLoading) {

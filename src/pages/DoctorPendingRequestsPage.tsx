@@ -109,7 +109,7 @@ export default function DoctorPendingRequestsPage() {
 
     try {
       setIsProcessing(true);
-      const payload: any = { action };
+      const payload: { action: string; rejectionReason?: string; alternativeSlots?: string[] } = { action };
 
       if (action === "reject") {
         payload.rejectionReason = rejectionReason;

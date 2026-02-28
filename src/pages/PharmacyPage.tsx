@@ -20,6 +20,7 @@ import EmptyState from "../components/EmptyState";
 import { MapPin, Phone, Clock, Star, Search, Navigation, ExternalLink, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 import type { Pharmacy } from "@/types";
 import {
   Dialog,
@@ -162,7 +163,7 @@ export default function PharmacyPage() {
         setPharmacies([]);
       }
     } catch (err) {
-      console.error("Failed to fetch pharmacies:", err);
+      logger.error("Failed to fetch pharmacies:", { error: err });
       if (axios.isAxiosError(err) && err.response) {
         setError(err.response.data?.message || "Failed to load pharmacies. Please try again.");
       } else {
@@ -193,7 +194,7 @@ export default function PharmacyPage() {
         fetchPharmacies(latitude, longitude);
       },
       (error) => {
-        console.warn("Geolocation error:", error.message);
+        logger.warn("Geolocation error:", { message: error.message });
         let status: "denied" | "unavailable" = "unavailable";
         let message = "Unable to access location. Showing all pharmacies.";
 

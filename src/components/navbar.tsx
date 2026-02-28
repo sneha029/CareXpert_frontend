@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { useTheme } from "@/context/theme-context";
+import { useTheme } from "@/context/useTheme";
 
 export const Navbar = memo(function Navbar() {
   const user = useAuthStore((state) => state.user);

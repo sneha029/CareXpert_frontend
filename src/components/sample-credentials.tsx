@@ -1,7 +1,8 @@
 import { useState } from "react";
 
 export function SampleCredentials() {
-  const [isVisible, _setIsVisible] = useState(true);
+  // visibility is currently always true; no setter needed for now
+  const [isVisible] = useState(true);
 
   if (!isVisible) return null;
 

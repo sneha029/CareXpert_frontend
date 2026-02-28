@@ -12,6 +12,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import * as React from "react";
 import { api } from "@/lib/api";
+import axios from "axios";
 import { notify } from "@/lib/toast";
 
 const getPasswordRules = (pwd: string) => [
@@ -21,9 +22,12 @@ const getPasswordRules = (pwd: string) => [
   { label: "At least one number (0-9)", pass: /[0-9]/.test(pwd) },
   {
     label: "At least one special character (!@#$%^&*)",
-    pass: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+    pass: specialCharRegex.test(pwd),
   },
 ];
+
+// regex matching the characters shown in the label below
+const specialCharRegex = /[!@#$%^&*]/;
 
 const getPasswordStrength = (pwd: string): { label: string; color: string; percentage: number } => {
   const rules = getPasswordRules(pwd);
@@ -135,8 +139,13 @@ export default function ResetPassword() {
         setResetSuccess(true);
         notify.success("Password reset successfully! Redirecting to login...");
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Failed to reset password. Please try again.";
+    } catch (err: unknown) {
+      let errorMessage = "Failed to reset password. Please try again.";
+      if (axios.isAxiosError(err) && err.response) {
+        errorMessage = err.response.data?.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
       notify.error(errorMessage);
       
       if (errorMessage.includes("token") || errorMessage.includes("expired")) {

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { motion, AnimatePresence } from "framer-motion";
+import { logger } from "@/lib/logger";
 import { useEffect, useState, useRef, memo } from "react";
 import { api } from "@/lib/api";
 
@@ -41,7 +42,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
             setUnreadCount(response.data.data.unreadCount);
           }
         } catch (error) {
-          console.error("Error fetching unread count:", error);
+          logger.error("Error fetching unread count:", error as Error);
         }
       };
 

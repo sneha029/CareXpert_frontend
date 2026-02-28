@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { logger } from "@/lib/logger";
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Button } from "./ui/button";
@@ -27,7 +28,7 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
   );
 
   // Debug logging
-  console.log('Layout Debug:', { user, location: location.pathname, shouldShowSidebar });
+  logger.debug('Layout render', { hasUser: !!user, pathname: location.pathname });
 
   // Always show sidebar for authenticated users on dashboard pages
   if (!user) {

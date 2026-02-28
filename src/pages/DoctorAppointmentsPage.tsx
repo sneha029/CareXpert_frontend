@@ -23,6 +23,7 @@ import { api } from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 import EmptyState from "@/components/EmptyState";
 import TemplateSelector from "@/components/TemplateSelector";
 import {
@@ -125,7 +126,7 @@ export default function DoctorAppointmentsPage() {
         setAppointments(allResponse.data.data);
       }
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      logger.error("Error fetching appointments:", error as Error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(
           error.response.data?.message || "Failed to fetch appointments"
@@ -152,7 +153,7 @@ export default function DoctorAppointmentsPage() {
         fetchAppointments();
       }
     } catch (error) {
-      console.error("Error accepting appointment:", error);
+      logger.error("Error accepting appointment:", error as Error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(
           error.response.data?.message || "Failed to accept appointment"
@@ -268,7 +269,7 @@ export default function DoctorAppointmentsPage() {
         fetchAppointments(); // Refresh the list
       }
     } catch (error) {
-      console.error("Error rejecting appointment:", error);
+      logger.error("Error rejecting appointment:", error as Error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(
           error.response.data?.message || "Failed to reject appointment"

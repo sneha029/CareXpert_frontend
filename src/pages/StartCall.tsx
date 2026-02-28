@@ -1,4 +1,5 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
+import { logger } from "@/lib/logger";
 import { videoCallAPI } from "@/lib/services";
 
 const VideoCall = lazy(() => import("../components/VideoCall"));
@@ -14,7 +15,7 @@ const StartCall: React.FC = () => {
         setMeetingId(res.data.roomId);
         setToken(res.data.token);
       } catch (err) {
-        console.error("Error getting meeting token", err);
+        logger.error("Error getting meeting token", err as Error);
       }
     };
 

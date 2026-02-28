@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from "@/store/authstore";
 import { api } from "@/lib/api";
 import axios from "axios";
+import { logger } from "@/lib/logger";
 import { notify } from "@/lib/toast";
 import { motion } from "framer-motion";
 import ReminderIndicator from "../components/ReminderIndicator";
@@ -57,20 +58,10 @@ export default function AppointmentDetailPage() {
   const authLoading = useAuthStore((state) => state.isLoading);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (authLoading) {
-      return;
-    }
+  // ensure fetchAppointmentDetail is declared before use
 
-    if (!appointmentId || user?.role !== "PATIENT") {
-      setLoading(false);
-      return;
-    }
 
-    fetchAppointmentDetail();
-  }, [authLoading, user, appointmentId]);
-
-  const fetchAppointmentDetail = async () => {
+  const fetchAppointmentDetail = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get<{ data: Appointment }>(
@@ -93,7 +84,7 @@ export default function AppointmentDetailPage() {
         }
       }
     } catch (error) {
-      console.error("Error fetching appointment:", error);
+      logger.error("Error fetching appointment:", error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(error.response.data?.message || "Failed to fetch appointment");
       } else {
@@ -102,7 +93,20 @@ export default function AppointmentDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appointmentId, navigate]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!appointmentId || user?.role !== "PATIENT") {
+      setLoading(false);
+      return;
+    }
+
+    fetchAppointmentDetail();
+  }, [authLoading, user, appointmentId, fetchAppointmentDetail]);
 
   const getStatusBadge = (status: string) => {
     const base =

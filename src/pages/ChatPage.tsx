@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -48,10 +48,15 @@ import {
 import { useAuthStore } from "@/store/authstore";
 import { relativeTime } from "@/lib/utils";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 
 // Uses the normalized flat shape from patientAPI so name/profilePicture
 // are always at the top level regardless of backend payload shape.
+// doctor info normalized by patientAPI
+
 type DoctorData = NormalizedDoctor;
+
+// chat target selection
 
 type SelectedChat =
   | "ai"
@@ -62,13 +67,20 @@ type SelectedChat =
     name: string;
     members: UserData[];
     admin: UserData[];
-  }; // Added type for community room
+  }; // community room
+
+// user object returned in various endpoints; some fields are optional depending on context
 
 type UserData = {
   id: string;
   name: string;
   profilePicture: string;
+  role?: string;
+  specialty?: string;
+  location?: string;
 };
+
+// rooms for city/community chats
 
 type CityRoomData = {
   id: string;
@@ -77,12 +89,69 @@ type CityRoomData = {
   admin: UserData[];
 };
 
+// messages coming from backend history endpoints (not the socket payload)
+
+type ApiChatMessage = {
+  senderId: string;
+  receiverId?: string;
+  sender: { name: string };
+  message: string;
+  timestamp: string;
+  messageType?: string;
+  imageUrl?: string;
+};
+
+// AI-specific chat entries used in the AI tab
+
+type AiMessage = {
+  id: string;
+  type: "ai" | "user";
+  message: string;
+  time: string;
+  aiData?: AiChat;
+};
+
+// conversation summary shape for doctor-side DM list
+
+type DMConversation = {
+  otherUser: UserData;
+  lastMessage?: { message: string; timestamp: string };
+  unreadCount?: number;
+};
+
+
 type CityRoomApiResponse = {
   statuscode: number;
   message: string;
   success: string;
   data: CityRoomData;
 };
+
+// AI chat entry returned from backend
+type AiChat = {
+  id: string;
+  userMessage: string;
+  aiMessage: string;
+  createdAt: string;
+  probable_causes?: string[];
+  probableCauses?: string[];
+  severity?: string;
+  recommendation?: string;
+  disclaimer?: string;
+  // additional properties may exist depending on version
+};
+
+// conversation shape used for doctor-patient direct messages
+type ChatHistoryEntry = {
+  senderId: string;
+  receiverId: string | null;
+  sender: { name: string };
+  message: string;
+  timestamp: string;
+  messageType?: string;
+  imageUrl?: string;
+};
+
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
@@ -92,13 +161,13 @@ export default function ChatPage() {
   const [cityRoom, setCityRoom] = useState<CityRoomData[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [communityMembers, setCommunityMembers] = useState<any[]>([]);
+  const [communityMembers, setCommunityMembers] = useState<UserData[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
 
   // DM conversation state for doctors
-  const [dmConversations, setDmConversations] = useState<any[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<DMConversation | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
   const user = useAuthStore((state) => state.user);
@@ -149,7 +218,7 @@ export default function ChatPage() {
   }, [user]);
 
   // AI Chat state
-  const [aiMessages, setAiMessages] = useState<any[]>([]);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isClearingAi, setIsClearingAi] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -226,14 +295,7 @@ export default function ChatPage() {
   }, [messages, aiMessages, isInitialLoad]);
 
   // Load AI chat history when AI tab is selected
-  useEffect(() => {
-    if (selectedChat === "ai") {
-      loadAiChatHistory();
-    }
-  }, [selectedChat]);
-
-  // Function to load AI chat history
-  const loadAiChatHistory = async () => {
+  const loadAiChatHistory = useCallback(async () => {
     try {
       const response = await api.get(`/ai-chat/history`);
       if (response.data.success) {
@@ -249,8 +311,8 @@ export default function ChatPage() {
             },
           ]);
         } else {
-          const formattedMessages = chats
-            .map((chat: any) => [
+          const formattedMessages: AiMessage[] = chats
+            .map((chat: AiChat) => [
               {
                 id: `${chat.id}-user`,
                 type: "user",
@@ -260,7 +322,7 @@ export default function ChatPage() {
               {
                 id: `${chat.id}-ai`,
                 type: "ai",
-                message: formatAiResponse(chat),
+                message: chat.aiMessage,
                 time: relativeTime(chat.createdAt),
                 aiData: chat,
               },
@@ -269,23 +331,19 @@ export default function ChatPage() {
           setAiMessages(formattedMessages);
         }
       }
-    } catch (error) {
-      console.error("Error loading AI chat history:", error);
-      // Show welcome message if no history
-      setAiMessages([
-        {
-          id: "welcome",
-          type: "ai",
-          message:
-            "Hello! I'm CareXpert AI, your health assistant. Describe your symptoms and I'll help analyze them for you.",
-          time: "Just now",
-        },
-      ]);
+    } catch (err) {
+      logger.error("Failed to load AI chat history", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (selectedChat === "ai") {
+      loadAiChatHistory();
+    }
+  }, [selectedChat, loadAiChatHistory]);
 
   // Function to format AI response for display
-  const formatAiResponse = (chat: any) => {
+  const formatAiResponse = (chat: AiChat) => {
     // Handle both API response format (probable_causes) and database format (probableCauses)
     const probableCauses = chat.probable_causes || chat.probableCauses || [];
     const { severity: _severity, recommendation, disclaimer } = chat;
@@ -319,7 +377,7 @@ export default function ChatPage() {
       await api.delete(`/ai-chat/history`);
       notify.success("AI chat history cleared");
     } catch (error) {
-      console.error("Error clearing AI chat history:", error);
+      logger.error("Error clearing AI chat history:", error as Error);
       notify.error("Failed to sync clear with server");
     } finally {
       setIsClearingAi(false);
@@ -332,7 +390,7 @@ export default function ChatPage() {
       setIsAiLoading(true);
 
       // Add user message immediately
-      const userMsg = {
+      const userMsg: AiMessage = {
         id: `user-${Date.now()}`,
         type: "user",
         message: userMessage,
@@ -357,7 +415,7 @@ export default function ChatPage() {
 
       if (response.data.success) {
         const aiData = response.data.data;
-        const aiMsg = {
+        const aiMsg: AiMessage = {
           id: `ai-${Date.now()}`,
           type: "ai",
           message: formatAiResponse(aiData),
@@ -367,11 +425,11 @@ export default function ChatPage() {
         setAiMessages((prev) => [...prev, aiMsg]);
       }
     } catch (error) {
-      console.error("Error sending AI message:", error);
+      logger.error("Error sending AI message:", error as Error);
       notify.error("Failed to get AI response. Please try again.");
 
       // Add error message
-      const errorMsg = {
+      const errorMsg: AiMessage = {
         id: `error-${Date.now()}`,
         type: "ai",
         message:
@@ -396,12 +454,12 @@ export default function ChatPage() {
         setDmConversations(response.data.data.conversations);
       }
     } catch (error) {
-      console.error("Error fetching DM conversations:", error);
+      logger.error("Error fetching DM conversations:", error as Error);
     }
   };
 
   // Function to handle conversation selection
-  const handleConversationSelect = async (conversation: any) => {
+  const handleConversationSelect = async (conversation: DMConversation) => {
     setSelectedConversation(conversation);
     setSelectedChat({
       type: "doctor",
@@ -434,7 +492,7 @@ export default function ChatPage() {
     try {
       const response = await loadOneOnOneChatHistory(patientId);
       if (response.success) {
-        const formattedMessages = response.data.messages.map((msg: any) => ({
+        const formattedMessages = response.data.messages.map((msg: ApiChatMessage) => ({
           roomId: generateRoomId(user?.id || "", patientId),
           senderId: msg.senderId,
           receiverId: msg.receiverId,
@@ -447,7 +505,7 @@ export default function ChatPage() {
         setMessages(formattedMessages);
       }
     } catch (error) {
-      console.error("Error loading conversation history:", error);
+      logger.error("Error loading conversation history:", error as Error);
     }
   };
 
@@ -460,7 +518,7 @@ export default function ChatPage() {
         setCommunityMembers(response.data.data.members);
       }
     } catch (error) {
-      console.error("Error fetching community members:", error);
+      logger.error("Error fetching community members:", error as Error);
     }
   };
 
@@ -485,7 +543,7 @@ export default function ChatPage() {
 
           if (isMounted && historyResponse.success) {
             const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
+              (msg: ChatHistoryEntry) => ({
                 roomId: roomId,
                 senderId: msg.senderId,
                 receiverId: msg.receiverId,
@@ -518,7 +576,7 @@ export default function ChatPage() {
             }
 
             const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
+              (msg: ChatHistoryEntry) => ({
                 roomId: roomId,
                 senderId: msg.senderId,
                 receiverId: null,
@@ -542,7 +600,7 @@ export default function ChatPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error("Error loading chat history:", error);
+          logger.error("Error loading chat history:", error as Error);
           setMessages([]);
         }
       }
@@ -850,13 +908,15 @@ export default function ChatPage() {
                                   {conversation.otherUser.name}
                                 </h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                  {conversation.lastMessage.message}
+                                  {conversation.lastMessage?.message}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                                  {relativeTime(conversation.lastMessage.timestamp)}
+                                  {conversation.lastMessage
+                                    ? relativeTime(conversation.lastMessage.timestamp)
+                                    : ""}
                                 </p>
                               </div>
-                              {conversation.unreadCount > 0 && (
+                              {conversation.unreadCount && conversation.unreadCount > 0 && (
                                 <Badge
                                   variant="destructive"
                                   className="text-xs"
@@ -1062,21 +1122,21 @@ export default function ChatPage() {
                                 <div className="mb-3">
                                   <Badge
                                     variant={
-                                      normalizeSeverity(msg.aiData.severity) ===
+                                      normalizeSeverity(msg.aiData?.severity || "") ===
                                         "severe"
                                         ? "destructive"
                                         : normalizeSeverity(
-                                          msg.aiData.severity
+                                          msg.aiData?.severity || ""
                                         ) === "moderate"
                                           ? "default"
                                           : "secondary"
                                     }
                                     className="mb-2"
                                   >
-                                    {msg.aiData.severity
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      msg.aiData.severity.slice(1)}{" "}
+                                    {msg.aiData?.severity
+                                      ? msg.aiData.severity.charAt(0).toUpperCase() +
+                                        msg.aiData.severity.slice(1)
+                                      : "Unknown"}{" "}
                                     Severity
                                   </Badge>
                                 </div>
@@ -1163,17 +1223,12 @@ export default function ChatPage() {
                       .map((msg, index) => (
                         <div
                           key={index}
-                          className={`flex mb-2 ${(msg as any).type === "user" ||
-                            msg.senderId === user?.id
-                            ? "justify-end"
-                            : "justify-start"
-                            }`}
+                          className={`flex mb-2 ${
+                            msg.senderId === user?.id ? "justify-end" : "justify-start"
+                          }`}
                         >
                           {selectedChat.type === "room" &&
-                            !(
-                              (msg as any).type === "user" ||
-                              msg.senderId === user?.id
-                            ) && (
+                            msg.senderId !== user?.id && (
                               <div className="mr-2 mt-[2px]">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={"/placeholder-user.jpg"} />
@@ -1184,11 +1239,11 @@ export default function ChatPage() {
                               </div>
                             )}
                           <div
-                            className={`max-w-[80%] py-2 px-[10px] rounded-lg ${(msg as any).type === "user" ||
+                            className={`max-w-[80%] py-2 px-[10px] rounded-lg ${
                               msg.senderId === user?.id
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                              }`}
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                            }`}
                           >
                             {msg.messageType === "IMAGE" && msg.imageUrl ? (
                               <img
@@ -1206,8 +1261,7 @@ export default function ChatPage() {
                             </p>
                           </div>
                           {selectedChat.type === "room" &&
-                            ((msg as any).type === "user" ||
-                              msg.senderId === user?.id) && (
+                            msg.senderId === user?.id && (
                               <div className="ml-2 mt-[2px]">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={user?.profilePicture} />

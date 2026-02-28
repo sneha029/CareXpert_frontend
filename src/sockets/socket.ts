@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { api } from "@/lib/api";
+import { logger } from "@/lib/logger";
 
 const URL = import.meta.env.VITE_SOCKET_URL;
 
@@ -46,6 +47,14 @@ export interface FormattedMessage {
   time: string;
   messageType?: string;
   imageUrl?: string;
+  // optional extensions used by various parts of the app
+  id?: string;
+  type?: string;
+  aiData?: unknown;
+  sender?: string;
+  timestamp?: string;
+  // unreadCount isn't really part of a message but some code added it accidentally
+  unreadCount?: number;
 }
 
 export const joinRoom = (roomId: string) => {
@@ -111,7 +120,7 @@ export const loadOneOnOneChatHistory = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error loading 1-on-1 chat history:", error);
+    logger.error("Error loading 1-on-1 chat history:", error as Error);
     throw error;
   }
 };
@@ -130,7 +139,7 @@ export const loadCityChatHistory = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error loading city chat history:", error);
+    logger.error("Error loading city chat history:", error as Error);
     throw error;
   }
 };
@@ -147,7 +156,7 @@ export const loadRoomChatHistory = async (
     });
     return response.data;
   } catch (error) {
-    console.error("Error loading room chat history:", error);
+    logger.error("Error loading room chat history:", error as Error);
     throw error;
   }
 };
@@ -164,7 +173,7 @@ export const loadDmChatHistory = async (
     });
     return response.data;
   } catch (error) {
-    console.error("Error loading DM chat history:", error);
+    logger.error("Error loading DM chat history:", error as Error);
     throw error;
   }
 };

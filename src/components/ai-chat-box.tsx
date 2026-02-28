@@ -184,7 +184,7 @@ export function AIChatBox() {
         notify.success("Chat cleared");
       }
     } catch (error) {
-      console.error("Error clearing backend chat history:", error);
+
       if (axios.isAxiosError(error) && error.response?.status !== 401) {
         notify.error("Failed to clear chat history");
       }

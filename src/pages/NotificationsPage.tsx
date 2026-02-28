@@ -6,7 +6,7 @@ import { Bell, Check, CheckCheck, Calendar, Stethoscope } from "lucide-react";
 import { api } from "@/lib/api";
 import { relativeTime } from "@/lib/utils";
 import { notify } from "@/lib/toast";
-import axios from "axios";
+import { logger } from "@/lib/logger";
 
 interface Notification {
   id: string;
@@ -27,28 +27,30 @@ export default function NotificationsPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await api.get(
-        `/user/notifications`,
-        { withCredentials: true, signal: controller.signal }
-      );
-
-      if (response.data.success) {
-        setNotifications(response.data.data.notifications);
+    const fetchNotifications = async () => {
+      try {
+        const response = await api.get("/user/notifications", {
+          signal: controller.signal,
+          withCredentials: true,
+        });
+        // API returns { data: { notifications: Notification[] } }
+        setNotifications(response.data?.data?.notifications || []);
+      } catch (error) {
+        if (error instanceof Error && error.message !== "canceled") {
+          logger.error("Error fetching notifications:", error);
+          notify.error("Failed to load notifications");
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      if (!axios.isCancel(error)) {
-        console.error("Error fetching notifications:", error);
-        notify.error("Failed to load notifications");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
+    // call the fetch function and handle cleanup
     fetchNotifications();
-    return () => controller.abort(); // Cancel on unmount
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const markAsRead = async (notificationId: string) => {
@@ -69,7 +71,7 @@ export default function NotificationsPage() {
       );
       notify.success("Notification marked as read");
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      logger.error("Error marking notification as read:", error as Error);
       notify.error("Failed to mark notification as read");
     } finally {
       setMarkingAsRead(null);
@@ -91,7 +93,7 @@ export default function NotificationsPage() {
       );
       notify.success("All notifications marked as read");
     } catch (error) {
-      console.error("Error marking all notifications as read:", error);
+      logger.error("Error marking all notifications as read:", error as Error);
       notify.error("Failed to mark all notifications as read");
     } finally {
       setIsMarkingAll(false);

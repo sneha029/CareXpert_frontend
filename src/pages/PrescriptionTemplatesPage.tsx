@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -43,6 +43,7 @@ import { useAuthStore } from "@/store/authstore";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import axios from "axios";
+import { logger } from "@/lib/logger";
 import EmptyState from "@/components/EmptyState";
 import { PrescriptionTemplate } from "@/types";
 
@@ -109,9 +110,37 @@ export default function PrescriptionTemplatesPage() {
     }
   }, [user]);
 
+  // memoize filter logic and depend solely on callback
+  const filterTemplates = useCallback(() => {
+    let filtered = [...templates];
+
+    // Filter by active status
+    if (showActiveOnly) {
+      filtered = filtered.filter((t) => t.isActive);
+    }
+
+    // Filter by tag
+    if (selectedTag !== "all") {
+      filtered = filtered.filter((t) => t.tags.includes(selectedTag));
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          t.name.toLowerCase().includes(query) ||
+          (t.description?.toLowerCase().includes(query) ?? false) ||
+          t.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
+    }
+
+    setFilteredTemplates(filtered);
+  }, [templates, searchQuery, selectedTag, showActiveOnly]);
+
   useEffect(() => {
     filterTemplates();
-  }, [templates, searchQuery, selectedTag, showActiveOnly]);
+  }, [filterTemplates]);
 
   const fetchTemplates = async () => {
     try {
@@ -146,36 +175,10 @@ export default function PrescriptionTemplatesPage() {
         setAvailableTags(res.data.data);
       }
     } catch (err) {
-      console.error("Failed to fetch tags:", err);
+      logger.error("Failed to fetch tags:", err);
     }
   };
 
-  const filterTemplates = () => {
-    let filtered = [...templates];
-
-    // Filter by active status
-    if (showActiveOnly) {
-      filtered = filtered.filter((t) => t.isActive);
-    }
-
-    // Filter by tag
-    if (selectedTag !== "all") {
-      filtered = filtered.filter((t) => t.tags.includes(selectedTag));
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(query) ||
-          (t.description?.toLowerCase().includes(query) ?? false) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
-    }
-
-    setFilteredTemplates(filtered);
-  };
 
   const handleCreateTemplate = async () => {
     if (!formData.name.trim() || !formData.prescriptionText.trim()) {

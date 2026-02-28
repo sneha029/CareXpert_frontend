@@ -32,4 +32,4 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   );
 }
 
-export { Badge, badgeVariants };
+export { Badge }; // badgeVariants is internal, not exported to keep file component-only

@@ -12,7 +12,8 @@ import {
   User,
   X,
   Bell,
-  MessageCircle
+  MessageCircle,
+  BookTemplate
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -70,6 +71,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
         { href: "/doctor/appointments", label: "Appointment Requests", icon: Calendar },
         { href: "/doctor/appointment-history", label: "Appointment History", icon: Clock },
         { href: "/doctor/prescriptions", label: "Prescriptions", icon: Pill },
+        { href: "/doctor/prescription-templates", label: "Prescription Templates", icon: BookTemplate },
         { href: "/doctor/reports", label: "Patient Reports", icon: FileText },
         { href: "/chat", label: "Chat", icon: MessageCircle },
         { href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount },

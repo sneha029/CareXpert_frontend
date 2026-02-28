@@ -24,6 +24,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { notify } from "@/lib/toast";
 import EmptyState from "@/components/EmptyState";
+import TemplateSelector from "@/components/TemplateSelector";
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,7 @@ export default function DoctorAppointmentsPage() {
     useState<string | null>(null);
   const [completeAfterPrescription, setCompleteAfterPrescription] =
     useState(false);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
 
   const apiBase = useMemo(() => {
     return (api.defaults.baseURL || "/api").replace(/\/+$/, "");
@@ -722,17 +724,27 @@ export default function DoctorAppointmentsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="flex items-center justify-between">
               <Label htmlFor="prescription-text">Prescription</Label>
-              <Textarea
-                id="prescription-text"
-                placeholder="Medication, dosage, instructions..."
-                value={prescriptionText}
-                onChange={(e) => setPrescriptionText(e.target.value)}
-                className="mt-1"
-                rows={8}
-              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTemplateSelectorOpen(true)}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Use Template
+              </Button>
             </div>
+            <Textarea
+              id="prescription-text"
+              placeholder="Medication, dosage, instructions..."
+              value={prescriptionText}
+              onChange={(e) => setPrescriptionText(e.target.value)}
+              className="mt-1"
+              rows={8}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -754,6 +766,13 @@ export default function DoctorAppointmentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Template Selector Dialog */}
+      <TemplateSelector
+        isOpen={templateSelectorOpen}
+        onClose={() => setTemplateSelectorOpen(false)}
+        onSelectTemplate={(text) => setPrescriptionText(text)}
+      />
     </div>
   );
 }

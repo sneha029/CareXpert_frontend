@@ -15,6 +15,7 @@ const DoctorAppointmentsPage = lazy(() => import("./pages/DoctorAppointmentsPage
 const DoctorAppointmentHistoryPage = lazy(() => import("./pages/DoctorAppointmentHistoryPage"));
 const DoctorPrescriptionsPage = lazy(() => import("./pages/DoctorPrescriptionsPage"));
 const DoctorReportsPage = lazy(() => import("./pages/DoctorReportsPage"));
+const PrescriptionTemplatesPage = lazy(() => import("./pages/PrescriptionTemplatesPage"));
 const PrescriptionsPage = lazy(() => import("./pages/PrescriptionsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const DoctorPendingRequestsPage = lazy(() => import("./pages/DoctorPendingRequestsPage"));
@@ -75,6 +76,9 @@ export default function AppRoutes() {
         </Route>
         <Route path="/doctor/prescriptions" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DoctorPrescriptionsPage />} />
+        </Route>
+        <Route path="/doctor/prescription-templates" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<PrescriptionTemplatesPage />} />
         </Route>
         <Route path="/doctor/reports" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DoctorReportsPage />} />

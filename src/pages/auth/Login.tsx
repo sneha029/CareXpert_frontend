@@ -21,12 +21,15 @@ const getPasswordRules = (pwd: string) => [
   { label: "At least one number (0-9)", pass: /[0-9]/.test(pwd) },
   {
     label: "At least one special character (!@#$%^&*)",
-    pass: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+    pass: specialCharRegex.test(pwd),
   },
 ];
 
-const emailRegex =
-  /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6}$/;
+// separate regex object to avoid escaping slash in literal
+// regex matching the characters shown in the label below
+const specialCharRegex = /[!@#$%^&*]/;
+
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -132,7 +135,7 @@ export default function Login() {
             Welcome Back
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-300">
-            Sign in to your careXpert account
+            Sign in to your CareXpert account
           </CardDescription>
         </CardHeader>
         <CardContent>

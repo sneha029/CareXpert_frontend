@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { logger } from "@/lib/logger";
 import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Button } from "./ui/button";
@@ -21,8 +22,17 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
     "/chat",
   ];
 
+
   const shouldShowSidebar =
     user && sidebarPages.some((page) => location.pathname.startsWith(page));
+
+  const shouldShowSidebar = user && sidebarPages.some(page => 
+    location.pathname.startsWith(page)
+  );
+
+  // Debug logging
+  logger.debug('Layout render', { hasUser: !!user, pathname: location.pathname });
+
 
   if (!user || !shouldShowSidebar) {
     return (

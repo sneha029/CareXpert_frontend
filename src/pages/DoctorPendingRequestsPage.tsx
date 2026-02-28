@@ -109,8 +109,8 @@ export default function DoctorPendingRequestsPage() {
 
     try {
       setIsProcessing(true);
-      const payload: any = { action };
-      
+      const payload: { action: string; rejectionReason?: string; alternativeSlots?: string[] } = { action };
+
       if (action === "reject") {
         payload.rejectionReason = rejectionReason;
         if (alternativeSlots.trim()) {
@@ -313,7 +313,7 @@ export default function DoctorPendingRequestsPage() {
               No Pending Requests
             </h3>
             <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-              You don't have any pending appointment requests at the moment. 
+              You don't have any pending appointment requests at the moment.
               New requests will appear here when patients book appointments.
             </p>
           </motion.div>
@@ -328,13 +328,13 @@ export default function DoctorPendingRequestsPage() {
               {action === "accept" ? "Accept Appointment Request" : "Reject Appointment Request"}
             </DialogTitle>
             <DialogDescription>
-              {action === "accept" 
+              {action === "accept"
                 ? "Are you sure you want to accept this appointment request? The patient will be notified."
                 : "Please provide a reason for rejecting this appointment request. You can also suggest alternative time slots."
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedRequest && (
             <div className="space-y-4">
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -28,8 +28,10 @@ import {
   User,
   Stethoscope,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { patientAPI, NormalizedDoctor } from "@/lib/services";
 import axios from "axios"; // Needed for axios.isAxiosError
 import {
   FormattedMessage,
@@ -46,17 +48,16 @@ import {
 import { useAuthStore } from "@/store/authstore";
 import { relativeTime } from "@/lib/utils";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
+import { sanitizeText, sanitizeImageUrl } from "@/lib/sanitize";
 
-type DoctorData = {
-  id: string;
-  specialty: string;
-  clinicLocation: string;
-  user: {
-    name: string;
-    profilePicture: string;
-  };
-  userId: string;
-};
+// Uses the normalized flat shape from patientAPI so name/profilePicture
+// are always at the top level regardless of backend payload shape.
+// doctor info normalized by patientAPI
+
+type DoctorData = NormalizedDoctor;
+
+// chat target selection
 
 type SelectedChat =
   | "ai"
@@ -67,13 +68,20 @@ type SelectedChat =
     name: string;
     members: UserData[];
     admin: UserData[];
-  }; // Added type for community room
+  }; // community room
+
+// user object returned in various endpoints; some fields are optional depending on context
 
 type UserData = {
   id: string;
   name: string;
   profilePicture: string;
+  role?: string;
+  specialty?: string;
+  location?: string;
 };
+
+// rooms for city/community chats
 
 type CityRoomData = {
   id: string;
@@ -82,12 +90,69 @@ type CityRoomData = {
   admin: UserData[];
 };
 
+// messages coming from backend history endpoints (not the socket payload)
+
+type ApiChatMessage = {
+  senderId: string;
+  receiverId?: string;
+  sender: { name: string };
+  message: string;
+  timestamp: string;
+  messageType?: string;
+  imageUrl?: string;
+};
+
+// AI-specific chat entries used in the AI tab
+
+type AiMessage = {
+  id: string;
+  type: "ai" | "user";
+  message: string;
+  time: string;
+  aiData?: AiChat;
+};
+
+// conversation summary shape for doctor-side DM list
+
+type DMConversation = {
+  otherUser: UserData;
+  lastMessage?: { message: string; timestamp: string };
+  unreadCount?: number;
+};
+
+
 type CityRoomApiResponse = {
   statuscode: number;
   message: string;
   success: string;
   data: CityRoomData;
 };
+
+// AI chat entry returned from backend
+type AiChat = {
+  id: string;
+  userMessage: string;
+  aiMessage: string;
+  createdAt: string;
+  probable_causes?: string[];
+  probableCauses?: string[];
+  severity?: string;
+  recommendation?: string;
+  disclaimer?: string;
+  // additional properties may exist depending on version
+};
+
+// conversation shape used for doctor-patient direct messages
+type ChatHistoryEntry = {
+  senderId: string;
+  receiverId: string | null;
+  sender: { name: string };
+  message: string;
+  timestamp: string;
+  messageType?: string;
+  imageUrl?: string;
+};
+
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
@@ -97,13 +162,13 @@ export default function ChatPage() {
   const [cityRoom, setCityRoom] = useState<CityRoomData[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [communityMembers, setCommunityMembers] = useState<any[]>([]);
+  const [communityMembers, setCommunityMembers] = useState<UserData[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
 
   // DM conversation state for doctors
-  const [dmConversations, setDmConversations] = useState<any[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [dmConversations, setDmConversations] = useState<DMConversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<DMConversation | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
   const user = useAuthStore((state) => state.user);
@@ -111,7 +176,7 @@ export default function ChatPage() {
   useEffect(() => {
     async function fetchAllDoctors() {
       try {
-        const res = await api.get(`/patient/fetchAllDoctors`);
+        const res = await patientAPI.getAllDoctors();
         if (res.data.success) {
           setDoctors(res.data.data);
         }
@@ -154,9 +219,10 @@ export default function ChatPage() {
   }, [user]);
 
   // AI Chat state
-  const [aiMessages, setAiMessages] = useState<any[]>([]);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isClearingAi, setIsClearingAi] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(() => {
     // Load language from localStorage or default to English
     return localStorage.getItem("ai-chat-language") || "en";
@@ -230,14 +296,7 @@ export default function ChatPage() {
   }, [messages, aiMessages, isInitialLoad]);
 
   // Load AI chat history when AI tab is selected
-  useEffect(() => {
-    if (selectedChat === "ai") {
-      loadAiChatHistory();
-    }
-  }, [selectedChat]);
-
-  // Function to load AI chat history
-  const loadAiChatHistory = async () => {
+  const loadAiChatHistory = useCallback(async () => {
     try {
       const response = await api.get(`/ai-chat/history`);
       if (response.data.success) {
@@ -253,8 +312,8 @@ export default function ChatPage() {
             },
           ]);
         } else {
-          const formattedMessages = chats
-            .map((chat: any) => [
+          const formattedMessages: AiMessage[] = chats
+            .map((chat: AiChat) => [
               {
                 id: `${chat.id}-user`,
                 type: "user",
@@ -264,7 +323,7 @@ export default function ChatPage() {
               {
                 id: `${chat.id}-ai`,
                 type: "ai",
-                message: formatAiResponse(chat),
+                message: chat.aiMessage,
                 time: relativeTime(chat.createdAt),
                 aiData: chat,
               },
@@ -273,23 +332,19 @@ export default function ChatPage() {
           setAiMessages(formattedMessages);
         }
       }
-    } catch (error) {
-      console.error("Error loading AI chat history:", error);
-      // Show welcome message if no history
-      setAiMessages([
-        {
-          id: "welcome",
-          type: "ai",
-          message:
-            "Hello! I'm CareXpert AI, your health assistant. Describe your symptoms and I'll help analyze them for you.",
-          time: "Just now",
-        },
-      ]);
+    } catch (err) {
+      logger.error("Failed to load AI chat history", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (selectedChat === "ai") {
+      loadAiChatHistory();
+    }
+  }, [selectedChat, loadAiChatHistory]);
 
   // Function to format AI response for display
-  const formatAiResponse = (chat: any) => {
+  const formatAiResponse = (chat: AiChat) => {
     // Handle both API response format (probable_causes) and database format (probableCauses)
     const probableCauses = chat.probable_causes || chat.probableCauses || [];
     const { severity: _severity, recommendation, disclaimer } = chat;
@@ -323,7 +378,7 @@ export default function ChatPage() {
       await api.delete(`/ai-chat/history`);
       notify.success("AI chat history cleared");
     } catch (error) {
-      console.error("Error clearing AI chat history:", error);
+      logger.error("Error clearing AI chat history:", error as Error);
       notify.error("Failed to sync clear with server");
     } finally {
       setIsClearingAi(false);
@@ -336,7 +391,7 @@ export default function ChatPage() {
       setIsAiLoading(true);
 
       // Add user message immediately
-      const userMsg = {
+      const userMsg: AiMessage = {
         id: `user-${Date.now()}`,
         type: "user",
         message: userMessage,
@@ -361,7 +416,7 @@ export default function ChatPage() {
 
       if (response.data.success) {
         const aiData = response.data.data;
-        const aiMsg = {
+        const aiMsg: AiMessage = {
           id: `ai-${Date.now()}`,
           type: "ai",
           message: formatAiResponse(aiData),
@@ -371,11 +426,11 @@ export default function ChatPage() {
         setAiMessages((prev) => [...prev, aiMsg]);
       }
     } catch (error) {
-      console.error("Error sending AI message:", error);
+      logger.error("Error sending AI message:", error as Error);
       notify.error("Failed to get AI response. Please try again.");
 
       // Add error message
-      const errorMsg = {
+      const errorMsg: AiMessage = {
         id: `error-${Date.now()}`,
         type: "ai",
         message:
@@ -400,12 +455,12 @@ export default function ChatPage() {
         setDmConversations(response.data.data.conversations);
       }
     } catch (error) {
-      console.error("Error fetching DM conversations:", error);
+      logger.error("Error fetching DM conversations:", error as Error);
     }
   };
 
   // Function to handle conversation selection
-  const handleConversationSelect = async (conversation: any) => {
+  const handleConversationSelect = async (conversation: DMConversation) => {
     setSelectedConversation(conversation);
     setSelectedChat({
       type: "doctor",
@@ -414,10 +469,15 @@ export default function ChatPage() {
         userId: conversation.otherUser.id,
         specialty: "Patient",
         clinicLocation: "",
-        user: {
-          name: conversation.otherUser.name,
-          profilePicture: conversation.otherUser.profilePicture,
-        },
+        name: conversation.otherUser.name ?? "",
+        profilePicture: conversation.otherUser.profilePicture ?? "",
+        experience: "",
+        education: "",
+        bio: "",
+        languages: [],
+        consultationFee: 0,
+        averageRating: 0,
+        totalReviews: 0,
       },
     });
     setMessages([]);
@@ -433,20 +493,20 @@ export default function ChatPage() {
     try {
       const response = await loadOneOnOneChatHistory(patientId);
       if (response.success) {
-        const formattedMessages = response.data.messages.map((msg: any) => ({
+        const formattedMessages = response.data.messages.map((msg: ApiChatMessage) => ({
           roomId: generateRoomId(user?.id || "", patientId),
           senderId: msg.senderId,
           receiverId: msg.receiverId,
-          username: msg.sender.name,
-          text: msg.message,
+          username: sanitizeText(msg.sender.name),
+          text: sanitizeText(msg.message),
           time: relativeTime(msg.timestamp),
           messageType: msg.messageType,
-          imageUrl: msg.imageUrl,
+          imageUrl: msg.imageUrl ? sanitizeImageUrl(msg.imageUrl) : undefined,
         }));
         setMessages(formattedMessages);
       }
     } catch (error) {
-      console.error("Error loading conversation history:", error);
+      logger.error("Error loading conversation history:", error as Error);
     }
   };
 
@@ -459,7 +519,7 @@ export default function ChatPage() {
         setCommunityMembers(response.data.data.members);
       }
     } catch (error) {
-      console.error("Error fetching community members:", error);
+      logger.error("Error fetching community members:", error as Error);
     }
   };
 
@@ -484,18 +544,18 @@ export default function ChatPage() {
 
           if (isMounted && historyResponse.success) {
             const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
+              (msg: ChatHistoryEntry) => ({
                 roomId: roomId,
                 senderId: msg.senderId,
                 receiverId: msg.receiverId,
-                username: msg.sender.name,
-                text: msg.message,
+                username: sanitizeText(msg.sender.name),
+                text: sanitizeText(msg.message),
                 time: new Date(msg.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 }),
                 messageType: msg.messageType,
-                imageUrl: msg.imageUrl,
+                imageUrl: msg.imageUrl ? sanitizeImageUrl(msg.imageUrl) : undefined,
               })
             );
             setMessages(formattedMessages);
@@ -517,18 +577,18 @@ export default function ChatPage() {
             }
 
             const formattedMessages = historyResponse.data.messages.map(
-              (msg: any) => ({
+              (msg: ChatHistoryEntry) => ({
                 roomId: roomId,
                 senderId: msg.senderId,
                 receiverId: null,
-                username: msg.sender.name,
-                text: msg.message,
+                username: sanitizeText(msg.sender.name),
+                text: sanitizeText(msg.message),
                 time: new Date(msg.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 }),
                 messageType: msg.messageType,
-                imageUrl: msg.imageUrl,
+                imageUrl: msg.imageUrl ? sanitizeImageUrl(msg.imageUrl) : undefined,
               })
             );
 
@@ -541,7 +601,7 @@ export default function ChatPage() {
         }
       } catch (error) {
         if (isMounted) {
-          console.error("Error loading chat history:", error);
+          logger.error("Error loading chat history:", error as Error);
           setMessages([]);
         }
       }
@@ -555,8 +615,18 @@ export default function ChatPage() {
   }, [selectedChat, user]);
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !selectedChat || !user) return;
+  if (!message.trim() || !selectedChat || !user) return;
+  if (isSendingMessage) return;
 
+    const sanitizedMessage = sanitizeText(message.trim());
+    if (!sanitizedMessage) {
+      notify.error('Invalid message content');
+      return;
+    }
+
+  setIsSendingMessage(true);
+
+  try {
     if (typeof selectedChat === "object" && selectedChat.type === "doctor") {
       const roomId = generateRoomId(user.id, selectedChat.data.userId);
 
@@ -565,18 +635,18 @@ export default function ChatPage() {
         senderId: user.id,
         receiverId: selectedChat.data.userId,
         username: user.name,
-        text: message.trim(),
+        text: sanitizedMessage,
         messageType: "TEXT",
         time: relativeTime(new Date()),
       };
 
       sendMessage(payload);
-      // Optimistically add the sent message to the UI
       setMessages((prev) => [...prev, { ...payload, type: "user" }]);
       setMessage("");
+
     } else if (selectedChat === "ai") {
       // Handle AI message sending
-      await sendAiMessage(message.trim());
+      await sendAiMessage(sanitizedMessage);
     } else if (
       typeof selectedChat === "object" &&
       selectedChat.type === "room"
@@ -585,21 +655,24 @@ export default function ChatPage() {
         notify.error("Connecting to room... please try again in a moment");
         return;
       }
-      // Handle community room message sending
+
       const payload = {
         roomId: activeRoomId,
         senderId: user.id,
         username: user.name,
-        text: message.trim(),
+        text: sanitizedMessage,
         messageType: "TEXT",
         time: relativeTime(new Date()),
       };
+
       SendMessageToRoom(payload);
       setMessages((prev) => [...prev, { ...payload, type: "user" }]);
       setMessage("");
     }
-  };
-
+  } finally {
+    setIsSendingMessage(false);
+  }
+};
   // Listen for incoming messages
   //Changed this for preventing duplicate listeners
   useEffect(() => {
@@ -764,11 +837,11 @@ export default function ChatPage() {
                             <Avatar className="h-10 w-10">
                               <AvatarImage
                                 src={
-                                  chat.user.profilePicture || "/placeholder.svg"
+                                  chat.profilePicture || "/placeholder.svg"
                                 }
                               />
                               <AvatarFallback>
-                                {chat.user.name
+                                {chat.name
                                   .split(" ")
                                   .map((n) => n[0])
                                   .join("")}
@@ -777,7 +850,7 @@ export default function ChatPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
-                              {chat.user.name}
+                              {chat.name}
                             </h4>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                               {chat.specialty}
@@ -842,13 +915,15 @@ export default function ChatPage() {
                                   {conversation.otherUser.name}
                                 </h4>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                                  {conversation.lastMessage.message}
+                                  {conversation.lastMessage?.message}
                                 </p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                                  {relativeTime(conversation.lastMessage.timestamp)}
+                                  {conversation.lastMessage
+                                    ? relativeTime(conversation.lastMessage.timestamp)
+                                    : ""}
                                 </p>
                               </div>
-                              {conversation.unreadCount > 0 && (
+                              {conversation.unreadCount && conversation.unreadCount > 0 && (
                                 <Badge
                                   variant="destructive"
                                   className="text-xs"
@@ -982,18 +1057,18 @@ export default function ChatPage() {
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
-                        src={selectedChat.data.user.profilePicture}
+                        src={selectedChat.data.profilePicture}
                       />
                       <AvatarFallback>
-                        {selectedChat.data.user.name
+                        {selectedChat.data.name
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <CardTitle className="text-lg">
-                        {selectedChat.data.user.name}
+                        {selectedChat.data.name}
                       </CardTitle>
                       <CardDescription>
                         {selectedChat.data.specialty} • Online
@@ -1054,21 +1129,21 @@ export default function ChatPage() {
                                 <div className="mb-3">
                                   <Badge
                                     variant={
-                                      normalizeSeverity(msg.aiData.severity) ===
+                                      normalizeSeverity(msg.aiData?.severity || "") ===
                                         "severe"
                                         ? "destructive"
                                         : normalizeSeverity(
-                                          msg.aiData.severity
+                                          msg.aiData?.severity || ""
                                         ) === "moderate"
                                           ? "default"
                                           : "secondary"
                                     }
                                     className="mb-2"
                                   >
-                                    {msg.aiData.severity
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      msg.aiData.severity.slice(1)}{" "}
+                                    {msg.aiData?.severity
+                                      ? msg.aiData.severity.charAt(0).toUpperCase() +
+                                        msg.aiData.severity.slice(1)
+                                      : "Unknown"}{" "}
                                     Severity
                                   </Badge>
                                 </div>
@@ -1107,7 +1182,7 @@ export default function ChatPage() {
                             </div>
                           ) : (
                             <p className="text-sm whitespace-pre-wrap">
-                              {msg.message}
+                              {sanitizeText(msg.message)}
                             </p>
                           )}
                           <p
@@ -1155,17 +1230,12 @@ export default function ChatPage() {
                       .map((msg, index) => (
                         <div
                           key={index}
-                          className={`flex mb-2 ${(msg as any).type === "user" ||
-                            msg.senderId === user?.id
-                            ? "justify-end"
-                            : "justify-start"
-                            }`}
+                          className={`flex mb-2 ${
+                            msg.senderId === user?.id ? "justify-end" : "justify-start"
+                          }`}
                         >
                           {selectedChat.type === "room" &&
-                            !(
-                              (msg as any).type === "user" ||
-                              msg.senderId === user?.id
-                            ) && (
+                            msg.senderId !== user?.id && (
                               <div className="mr-2 mt-[2px]">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={"/placeholder-user.jpg"} />
@@ -1176,21 +1246,25 @@ export default function ChatPage() {
                               </div>
                             )}
                           <div
+
                             className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[65%] py-2 px-[10px] rounded-lg ${(msg as any).type === "user" ||
+
+                            className={`max-w-[80%] py-2 px-[10px] rounded-lg ${
+
                               msg.senderId === user?.id
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
-                              }`}
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                            }`}
                           >
                             {msg.messageType === "IMAGE" && msg.imageUrl ? (
                               <img
-                                src={msg.imageUrl}
+                                src={sanitizeImageUrl(msg.imageUrl)}
                                 alt="sent-img"
                                 className="rounded mb-1 max-w-full h-auto"
                               />
                             ) : (
                               <p className="text-sm whitespace-pre-wrap">
-                                {msg.text}
+                                {sanitizeText(msg.text)}
                               </p>
                             )}
                             <p className="text-xs mt-1 text-right text-gray-400">
@@ -1198,8 +1272,7 @@ export default function ChatPage() {
                             </p>
                           </div>
                           {selectedChat.type === "room" &&
-                            ((msg as any).type === "user" ||
-                              msg.senderId === user?.id) && (
+                            msg.senderId === user?.id && (
                               <div className="ml-2 mt-[2px]">
                                 <Avatar className="h-6 w-6">
                                   <AvatarImage src={user?.profilePicture} />
@@ -1309,6 +1382,7 @@ export default function ChatPage() {
                 className="flex-1 rounded-xl"
                 />
                 {/* fix1 */}
+
                 <Button
                   onClick={handleSendMessage}
                   className="px-6 rounded-xl"
@@ -1316,6 +1390,21 @@ export default function ChatPage() {
                 >
                   <Send className="h-4 w-4" />
                 </Button>
+                <Button onClick={handleSendMessage}
+  className="px-6"
+  disabled={
+    !message.trim() ||
+    isSendingMessage ||
+    (selectedChat === "ai" && isAiLoading)
+  }
+>
+  {isSendingMessage ? (
+    <Loader2 className="h-4 w-4 animate-spin" />
+  ) : (
+    <Send className="h-4 w-4" />
+  )}
+</Button>
+
               </div>
             </div>
           </Card>

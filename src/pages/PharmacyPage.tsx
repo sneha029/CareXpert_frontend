@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 
+import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
+
 import type { Pharmacy } from "@/types";
 import {
   Dialog,
@@ -76,8 +79,14 @@ export default function PharmacyPage() {
 
       setPharmacies(processed);
     } catch (err) {
+
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || "Failed to load pharmacies");
+
+      logger.error("Failed to fetch pharmacies:", { error: err });
+      if (axios.isAxiosError(err) && err.response) {
+        setError(err.response.data?.message || "Failed to load pharmacies. Please try again.");
+
       } else {
         setError("Failed to load pharmacies");
       }
@@ -85,6 +94,74 @@ export default function PharmacyPage() {
     } finally {
       setIsLoading(false);
     }
+
+  }, []);
+
+  /**
+   * Request geolocation on mount
+   */
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus("unavailable");
+      notify.warning("Geolocation is not supported by your browser");
+      fetchPharmacies();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setLocationStatus("granted");
+        fetchPharmacies(latitude, longitude);
+      },
+      (error) => {
+        logger.warn("Geolocation error:", { message: error.message });
+        let status: "denied" | "unavailable" = "unavailable";
+        let message = "Unable to access location. Showing all pharmacies.";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            status = "denied";
+            message = "Location access denied. Showing all pharmacies.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            status = "unavailable";
+            message = "Location unavailable. Showing all pharmacies.";
+            break;
+          case error.TIMEOUT:
+            status = "unavailable";
+            message = "Location request timed out. Showing all pharmacies.";
+            break;
+          default:
+            status = "unavailable";
+            message = "Unable to access location. Showing all pharmacies.";
+            break;
+        }
+
+        setLocationStatus(status);
+        notify.info(message);
+        fetchPharmacies();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000, // Cache for 5 minutes
+      }
+    );
+  }, [fetchPharmacies]);
+
+  /**
+   * Handle search with debounce
+   * First effect: update debouncedSearch after a delay when searchQuery changes
+   */
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+
   }, [searchQuery]);
 
   useEffect(() => {

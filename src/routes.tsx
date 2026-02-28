@@ -14,6 +14,7 @@ const DoctorsPage = lazy(() => import("./pages/DoctorsPage"));
 const DoctorProfilePage = lazy(() => import("./pages/DoctorProfilePage"));
 const BookAppointmentPage = lazy(() => import("./pages/BookAppointmentPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+
 const AppointmentManagementPage = lazy(
   () => import("./pages/AppointmentManagementPage")
 );
@@ -23,6 +24,13 @@ const DoctorAppointmentsPage = lazy(
 const DoctorAppointmentHistoryPage = lazy(
   () => import("./pages/DoctorAppointmentHistoryPage")
 );
+const AppointmentManagementPage = lazy(() => import("./pages/AppointmentManagementPage"));
+const DoctorAppointmentsPage = lazy(() => import("./pages/DoctorAppointmentsPage"));
+const DoctorAppointmentHistoryPage = lazy(() => import("./pages/DoctorAppointmentHistoryPage"));
+const DoctorPrescriptionsPage = lazy(() => import("./pages/DoctorPrescriptionsPage"));
+const DoctorReportsPage = lazy(() => import("./pages/DoctorReportsPage"));
+const DoctorReviewsPage = lazy(() => import("./pages/DoctorReviewsPage"));
+const PrescriptionTemplatesPage = lazy(() => import("./pages/PrescriptionTemplatesPage"));
 const PrescriptionsPage = lazy(() => import("./pages/PrescriptionsPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const DoctorPendingRequestsPage = lazy(
@@ -35,16 +43,23 @@ const PatientDashboard = lazy(() => import("./pages/PatientDashboard"));
 const DoctorDashboard = lazy(() => import("./pages/DoctorDashboard"));
 const StartCall = lazy(() => import("./pages/StartCall"));
 const UploadReportPage = lazy(() => import("./pages/UploadReportPage"));
+
 const AppointmentHistoryPage = lazy(
   () => import("./pages/AppointmentHistoryPage")
 );
 const AppointmentStatusPage = lazy(
   () => import("./pages/AppointmentStatusPage")
 );
+
+const AppointmentHistoryPage = lazy(() => import("./pages/AppointmentHistoryPage"));
+const AppointmentDetailPage = lazy(() => import("./pages/AppointmentDetailPage"));
+const MyReviewsPage = lazy(() => import("./pages/MyReviewsPage"));
+const AppointmentStatusPage = lazy(() => import("./pages/AppointmentStatusPage"));
 const PharmacyPage = lazy(() => import("./pages/PharmacyPage"));
 const ResetPassword = lazy(() => import("./pages/auth/ResetPassword"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const HealthMetricsDashboardPage = lazy(() => import("./pages/HealthMetricsDashboardPage"));
 
 /* ============================= */
 /* Loader */
@@ -65,7 +80,6 @@ const PageLoader = () => (
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
-
   if (!user) {
     return <Navigate to="/auth/login" replace />;
   }
@@ -129,6 +143,79 @@ export default function AppRoutes() {
           <Route path="/pharmacy" element={<PharmacyPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/start-call" element={<StartCall />} />
+
+        <Route path="/appointments" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<AppointmentManagementPage />} />
+        </Route>
+        <Route path="/doctor/appointments" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorAppointmentsPage />} />
+        </Route>
+        <Route path="/doctor/appointment-history" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorAppointmentHistoryPage />} />
+        </Route>
+        <Route path="/doctor/prescriptions" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorPrescriptionsPage />} />
+        </Route>
+        <Route path="/doctor/prescription-templates" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<PrescriptionTemplatesPage />} />
+        </Route>
+        <Route path="/doctor/reports" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorReportsPage />} />
+        </Route>
+        <Route path="/doctor/reviews" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorReviewsPage />} />
+        </Route>
+        <Route path="/prescriptions" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<PrescriptionsPage />} />
+        </Route>
+        <Route path="/notifications" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<NotificationsPage />} />
+        </Route>
+        <Route path="/pending-requests" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorPendingRequestsPage />} />
+        </Route>
+        <Route path="/profile" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<ProfilePage />} />
+        </Route>
+        <Route path="/doctors" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorsPage />} />
+        </Route>
+        <Route path="/doctors/:id" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<DoctorProfilePage />} />
+        </Route>
+        <Route path="/book-appointment/:id" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<BookAppointmentPage />} />
+        </Route>
+        <Route path="/chat" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<ChatPage />} />
+        </Route>
+        <Route path="/upload-report" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<UploadReportPage />} />
+        </Route>
+        <Route path="/appointment-history" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<AppointmentHistoryPage />} />
+        </Route>
+        <Route path="/appointment/:appointmentId" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<AppointmentDetailPage />} />
+        </Route>
+        <Route path="/my-reviews" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<MyReviewsPage />} />
+        </Route>
+        <Route path="/appointment-status" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<AppointmentStatusPage />} />
+        </Route>
+        <Route path="/pharmacy" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<PharmacyPage />} />
+        </Route>
+        <Route path="/admin" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<AdminPage />} />
+        </Route>
+        <Route path="/start-call" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<StartCall />} />
+
+        </Route>
+        <Route path="/patient/:patientId/health-metrics" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+          <Route index element={<HealthMetricsDashboardPage />} />
         </Route>
 
         {/* ---------- 404 ---------- */}

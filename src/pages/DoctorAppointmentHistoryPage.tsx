@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { Input } from "../components/ui/input";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -73,9 +74,6 @@ export default function DoctorAppointmentHistoryPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    filterAppointments();
-  }, [appointments, searchTerm, statusFilter, dateFilter]);
 
   const fetchAppointmentHistory = async () => {
     try {
@@ -89,7 +87,7 @@ export default function DoctorAppointmentHistoryPage() {
         setAppointments(response.data.data);
       }
     } catch (error) {
-      console.error("Error fetching appointment history:", error);
+      logger.error("Error fetching appointment history:", error as Error);
       if (axios.isAxiosError(error) && error.response) {
         notify.error(error.response.data?.message || "Failed to fetch appointment history");
       } else {
@@ -100,7 +98,7 @@ export default function DoctorAppointmentHistoryPage() {
     }
   };
 
-  const filterAppointments = () => {
+  const filterAppointments = useCallback(() => {
     let filtered = [...appointments];
 
     // Search filter
@@ -116,26 +114,27 @@ export default function DoctorAppointmentHistoryPage() {
       filtered = filtered.filter(appointment => appointment.status === statusFilter);
     }
 
-    // Date filter
+    // Date filter with optional ranges
     if (dateFilter !== 'all') {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
+
       filtered = filtered.filter(appointment => {
         const appointmentDate = new Date(appointment.date);
-        
+
         switch (dateFilter) {
           case 'today':
             return appointmentDate.toDateString() === today.toDateString();
-          case 'thisWeek':
+          case 'thisWeek': {
             const weekStart = new Date(today);
             weekStart.setDate(today.getDate() - today.getDay());
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekStart.getDate() + 6);
             return appointmentDate >= weekStart && appointmentDate <= weekEnd;
+          }
           case 'thisMonth':
-            return appointmentDate.getMonth() === now.getMonth() && 
-                   appointmentDate.getFullYear() === now.getFullYear();
+            return appointmentDate.getMonth() === now.getMonth() &&
+              appointmentDate.getFullYear() === now.getFullYear();
           case 'past':
             return appointmentDate < today;
           case 'upcoming':
@@ -150,7 +149,11 @@ export default function DoctorAppointmentHistoryPage() {
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFilteredAppointments(filtered);
-  };
+  }, [appointments, searchTerm, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    filterAppointments();
+  }, [filterAppointments]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
@@ -162,7 +165,7 @@ export default function DoctorAppointmentHistoryPage() {
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.PENDING;
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {config.label}
@@ -341,7 +344,7 @@ export default function DoctorAppointmentHistoryPage() {
                 No appointments found
               </h3>
               <p className="text-gray-500 dark:text-gray-400 text-center">
-                {appointments.length === 0 
+                {appointments.length === 0
                   ? "You don't have any appointments yet."
                   : "No appointments match your current filters."
                 }

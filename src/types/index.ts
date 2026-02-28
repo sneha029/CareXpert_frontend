@@ -63,3 +63,105 @@ export interface BlockedDate {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// Health Metrics Types
+export type MetricStatus = 'NORMAL' | 'ABNORMAL' | 'CRITICAL';
+export type TrendDirection = 'up' | 'down' | 'stable';
+
+export interface PatientHealthMetric {
+  id: string;
+  patientId: string;
+  metricType: string;
+  value: number;
+  unit: string;
+  isAbnormal: boolean;
+  notes?: string;
+  recordedAt: string;
+  recordedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  recordedByUser?: {
+    id: string;
+    name: string;
+    role: string;
+  };
+}
+
+export interface MetricFilters {
+  metricType?: string;
+  startDate?: string;
+  endDate?: string;
+  abnormalOnly?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MetricsResponse {
+  success: boolean;
+  data: {
+    metrics: PatientHealthMetric[];
+    pagination: {
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  };
+}
+
+export interface LatestMetrics {
+  [metricType: string]: PatientHealthMetric;
+}
+
+export interface TrendData {
+  metricType: string;
+  trend: TrendDirection;
+  percentageChange: number;
+  average: number;
+  min: number;
+  max: number;
+  latest: number;
+  dataPoints: Array<{
+    date: string;
+    value: number;
+  }>;
+}
+
+export interface MetricAlert {
+  id: string;
+  patientId: string;
+  metricType: string;
+  value: number;
+  unit: string;
+  notes?: string;
+  recordedAt: string;
+  recordedBy?: string;
+  isAbnormal: boolean;
+  createdAt: string;
+  updatedAt: string;
+  recordedByUser?: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  severity: 'normal' | 'abnormal' | 'critical';
+}
+
+export interface NewMetric {
+  metricType: string;
+  value: number;
+  unit: string;
+  notes?: string;
+  recordedAt?: string;
+}
+export interface PrescriptionTemplate {
+  id: string;
+  doctorId: string;
+  name: string;
+  description?: string | null;
+  prescriptionText: string;
+  isActive: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}

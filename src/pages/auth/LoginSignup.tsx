@@ -157,6 +157,7 @@ export default function LoginSignup() {
         setUser(response.data.data);
         notify.success("Login successful!");
 
+        // Navigate based on role
         const role = response.data.data.role;
         if (role === "DOCTOR") {
           navigate("/dashboard/doctor");

@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+package-lock.json
 
 # next.js
 /.next/
@@ -20,9 +21,17 @@ yarn-error.log*
 # env files
 .env*
 
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated build/lint logs
+build_output.txt
+build_errors.txt
+full_build_output.txt
+current_lint.txt
+lint_results.txt

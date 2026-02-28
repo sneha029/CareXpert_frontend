@@ -42,6 +42,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { api } from "@/lib/api";
 import axios from "axios";
+import { logger } from "@/lib/logger";
 import { notify } from "@/lib/toast";
 
 /**
@@ -129,7 +130,7 @@ export default function DoctorSignup() {
       } else {
         notify.error("Unknown error occurred.");
       }
-      console.error(err);
+      logger.error("Doctor signup error:", err as Error);
     }
   };
 

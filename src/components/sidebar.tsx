@@ -12,10 +12,13 @@ import {
   User,
   X,
   Bell,
-  MessageCircle
+  MessageCircle,
+  Star,
+  BookTemplate
 } from "lucide-react";
 import { useAuthStore } from "@/store/authstore";
 import { motion, AnimatePresence } from "framer-motion";
+import { logger } from "@/lib/logger";
 import { useEffect, useState, useRef, memo } from "react";
 import { api } from "@/lib/api";
 
@@ -39,7 +42,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
             setUnreadCount(response.data.data.unreadCount);
           }
         } catch (error) {
-          console.error("Error fetching unread count:", error);
+          logger.error("Error fetching unread count:", error as Error);
         }
       };
 
@@ -70,7 +73,9 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
         { href: "/doctor/appointments", label: "Appointment Requests", icon: Calendar },
         { href: "/doctor/appointment-history", label: "Appointment History", icon: Clock },
         { href: "/doctor/prescriptions", label: "Prescriptions", icon: Pill },
+        { href: "/doctor/prescription-templates", label: "Prescription Templates", icon: BookTemplate },
         { href: "/doctor/reports", label: "Patient Reports", icon: FileText },
+        { href: "/doctor/reviews", label: "My Reviews", icon: Star },
         { href: "/chat", label: "Chat", icon: MessageCircle },
         { href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount },
         { href: "/profile", label: "Profile", icon: User },
@@ -87,6 +92,7 @@ export const Sidebar = memo(function Sidebar({ isOpen, onToggle }: SidebarProps)
         { href: "/notifications", label: "Notifications", icon: Bell, badge: unreadCount },
         { href: "/pharmacy", label: "Pharmacy Near Me", icon: MapPin },
         { href: "/appointment-history", label: "Appointment History", icon: Clock },
+        { href: "/my-reviews", label: "My Reviews", icon: Star },
         { href: "/profile", label: "Profile", icon: User },
       ];
     }

@@ -22,6 +22,7 @@ import { api } from "@/lib/api";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 
 type Appointment = {
   id: string;
@@ -64,6 +65,13 @@ export default function AppointmentManagementPage() {
     }
   }, [user, navigate]);
 
+  function parseAppointmentDateTime(dateStr: string, timeStr: string) {
+    if (dateStr.includes("T")) {
+      return new Date(dateStr);
+    }
+    return new Date(`${dateStr}T${timeStr}`);
+  }
+
   useEffect(() => {
     async function fetchAppointments() {
       try {
@@ -72,30 +80,24 @@ export default function AppointmentManagementPage() {
         if (res.data.success) {
           const allAppointments = res.data.data;
           const now = new Date();
-          
-          
-          function parseAppointmentDateTime(dateStr: string, timeStr: string) {
-            // If dateStr already contains 'T', assume it's ISO and just return new Date(dateStr)
-            if (dateStr.includes('T')) {
-              return new Date(dateStr);
-            }
-            // Otherwise, combine date and time as local time
-            // e.g. "2025-09-14" + "12:30" => "2025-09-14T12:30"
-            // This will be interpreted as local time by JS Date
-            return new Date(`${dateStr}T${timeStr}`);
-          }
 
           // Separate upcoming and past appointments
-          const upcoming = allAppointments.filter(apt => {
-            const appointmentDateTime = parseAppointmentDateTime(apt.date, apt.time);
+          const upcoming = allAppointments.filter((apt) => {
+            const appointmentDateTime = parseAppointmentDateTime(
+              apt.date,
+              apt.time
+            );
             return appointmentDateTime >= now;
           });
 
-          const past = allAppointments.filter(apt => {
-            const appointmentDateTime = parseAppointmentDateTime(apt.date, apt.time);
+          const past = allAppointments.filter((apt) => {
+            const appointmentDateTime = parseAppointmentDateTime(
+              apt.date,
+              apt.time
+            );
             return appointmentDateTime < now;
           });
-          
+
           setUpcomingAppointments(upcoming);
           setPastAppointments(past);
         }
@@ -114,7 +116,7 @@ export default function AppointmentManagementPage() {
   }, []);
 
   useEffect(() => {
-    console.log(upcomingAppointments);
+    logger.debug("Upcoming appointments updated", { count: upcomingAppointments?.length || 0 });
   }, [upcomingAppointments]);
 
   if (isLoading) {
@@ -145,7 +147,7 @@ export default function AppointmentManagementPage() {
               Manage your upcoming and past appointments
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => navigate("/doctors")}
             className="bg-blue-600 hover:bg-blue-700 dark:text-white "
           >
@@ -213,9 +215,9 @@ export default function AppointmentManagementPage() {
                           </Badge>
                           <Badge variant={
                             appointment.status === "PENDING" ? "outline" :
-                            appointment.status === "CONFIRMED" ? "default" :
-                            appointment.status === "COMPLETED" ? "secondary" :
-                            appointment.status === "REJECTED" ? "destructive" : "secondary"
+                              appointment.status === "CONFIRMED" ? "default" :
+                                appointment.status === "COMPLETED" ? "secondary" :
+                                  appointment.status === "REJECTED" ? "destructive" : "secondary"
                           }>
                             {appointment.status === "PENDING" ? "Request Sent" : appointment.status}
                           </Badge>
@@ -242,7 +244,7 @@ export default function AppointmentManagementPage() {
                   <p className="text-gray-500 dark:text-gray-400 mb-4">
                     No upcoming appointments
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => navigate("/doctors")}
                     variant="outline"
                   >
@@ -312,9 +314,9 @@ export default function AppointmentManagementPage() {
                           </Badge>
                           <Badge variant={
                             appointment.status === "PENDING" ? "outline" :
-                            appointment.status === "CONFIRMED" ? "default" :
-                            appointment.status === "COMPLETED" ? "secondary" :
-                            appointment.status === "REJECTED" ? "destructive" : "secondary"
+                              appointment.status === "CONFIRMED" ? "default" :
+                                appointment.status === "COMPLETED" ? "secondary" :
+                                  appointment.status === "REJECTED" ? "destructive" : "secondary"
                           }>
                             {appointment.status === "PENDING" ? "Request Sent" : appointment.status}
                           </Badge>

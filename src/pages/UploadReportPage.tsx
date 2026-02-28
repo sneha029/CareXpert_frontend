@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import axios from "axios";
 import { Badge } from "../components/ui/badge";
 import { notify } from "@/lib/toast";
+import { logger } from "@/lib/logger";
 
 interface AbnormalValue {
   name: string;
@@ -37,7 +38,7 @@ interface ReportAnalysisResult {
 export default function UploadReportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [_reportId, setReportId] = useState<string | null>(null);
+  const [, setReportId] = useState<string | null>(null);
   const [status, setStatus] = useState<
     "IDLE" | "PROCESSING" | "COMPLETED" | "FAILED"
   >("IDLE");
@@ -62,7 +63,7 @@ export default function UploadReportPage() {
     }
   };
 
-  const startPolling = (id: string) => {
+  const startPolling = useCallback((id: string) => {
     stopPolling();
 
     let errorCount = 0;
@@ -97,7 +98,7 @@ export default function UploadReportPage() {
         }
       } catch (err) {
         errorCount++;
-        console.error("Polling error:", err);
+        logger.error("Polling error:", err);
 
         // ✅ Stop after multiple errors
         if (errorCount >= maxErrors) {
@@ -109,11 +110,9 @@ export default function UploadReportPage() {
         }
       }
     }, 2000);
-  };
+  }, []);
 
-  // ✅ Comprehensive cleanup on mount/unmount
   useEffect(() => {
-    // Load saved state
     try {
       const saved = localStorage.getItem(LS_REPORT_STATE_KEY);
       if (saved) {
@@ -136,15 +135,10 @@ export default function UploadReportPage() {
           setStatus(parsedLast.status || "COMPLETED");
         }
       }
-    } catch { }
+    } catch { /* ignore */ }
 
-    // ✅ Always cleanup on unmount
-    return () => {
-      stopPolling();
-      // Clear any pending state updates
-      setIsUploading(false);
-    };
-  }, []);
+    return () => stopPolling();
+  }, [startPolling]);
 
   // ✅ Also cleanup when file changes
   useEffect(() => {
@@ -332,27 +326,34 @@ export default function UploadReportPage() {
                       <div className="font-semibold mb-2">Abnormal Values</div>
                       <div className="space-y-3">
                         {result.abnormalValues
-                          .map((raw: any, i: number) => {
+                          .map((raw: unknown, i: number) => {
+                            const obj = raw as Record<string, unknown>;
                             const name =
-                              raw.test_name ||
-                              raw.testName ||
-                              raw.parameter ||
+                              (obj.test_name as string) ||
+                              (obj.testName as string) ||
+                              (obj.parameter as string) ||
                               `Result ${i + 1}`;
                             const value =
-                              raw.value ??
-                              raw.measured_value ??
-                              raw.measuredValue;
-                            const unit = raw.unit || raw.units || "";
+                              (obj.value as string | number) ??
+                              (obj.measured_value as string | number) ??
+                              (obj.measuredValue as string | number);
+                            const unit =
+                              (obj.unit as string) ||
+                              (obj.units as string) ||
+                              "";
                             const normal =
-                              raw.normal_range ||
-                              raw.normalRange ||
-                              raw.reference ||
+                              (obj.normal_range as string) ||
+                              (obj.normalRange as string) ||
+                              (obj.reference as string) ||
                               "";
                             const issue =
-                              raw.issue || raw.reason || raw.flag || "";
+                              (obj.issue as string) ||
+                              (obj.reason as string) ||
+                              (obj.flag as string) ||
+                              "";
                             return { name, value, unit, normal, issue };
                           })
-                          .map((v: any, idx: number) => (
+                          .map((v, idx: number) => (
                             <div
                               key={`${v.name}-${idx}`}
                               className="rounded-lg border border-red-500/20 bg-red-500/5 p-4"
@@ -397,11 +398,11 @@ export default function UploadReportPage() {
                       </div>
                       <ul className="list-disc pl-6 space-y-1">
                         {result.possibleConditions.map(
-                          (c: any, idx: number) => (
+                          (c: string | { condition: string }, idx: number) => (
                             <li key={idx}>
                               {typeof c === "string"
                                 ? c
-                                : c?.condition || JSON.stringify(c)}
+                                : c.condition}
                             </li>
                           )
                         )}
